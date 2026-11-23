@@ -10,6 +10,8 @@ import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
 import android.content.Intent;
 import android.net.Uri;
+import android.net.ConnectivityManager;
+import android.net.Network;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -54,6 +56,8 @@ public class MainActivity extends Activity {
     private long rangeStart, rangeEnd;
     private String homeSearchQuery = "";
     private GoogleSignInClient googleSignInClient;
+    private ConnectivityManager connectivityManager;
+    private ConnectivityManager.NetworkCallback networkCallback;
     private static final int RC_GOOGLE_SIGN_IN = 9107;
     private int ink=0xFF18352B, muted=0xFF718078, green=0xFF26734D, bg=0xFFF4F8F4, red=0xFFBA4A45, line=0xFFE1EAE2, paleGreen=0xFFE4F2E7;
     private boolean darkMode;
@@ -66,6 +70,10 @@ public class MainActivity extends Activity {
         GoogleSignInOptions signInOptions = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestEmail().requestIdToken(getString(R.string.default_web_client_id)).build();
         googleSignInClient = GoogleSignIn.getClient(this, signInOptions);
+        connectivityManager=(ConnectivityManager)getSystemService(CONNECTIVITY_SERVICE);
+        networkCallback=new ConnectivityManager.NetworkCallback(){
+            @Override public void onAvailable(Network network){runOnUiThread(()->syncIfSignedIn());}
+        };
         updateSystemBars();
         Store.migrateOpeningBalance(this);
         if (!Store.isSetup(this)) showOpeningSetup(); else { initRange(); maybeCatchUp(); showMain(); }
@@ -480,5 +488,5 @@ public class MainActivity extends Activity {
     private String[] activeIconSelection;
     private Button activeIconTrigger;
 
-    @Override protected void onResume(){super.onResume();if(Store.isSetup(this)){maybeCatchUp();syncIfSignedIn();if(root!=null){if(currentScreen.equals("daily"))showDaily();else if(currentScreen.equals("spending"))showSpending();else if(currentScreen.equals("tags"))showTags();else showMain();}}}
+    @Override protected void onStart(){super.onStart();try{if(connectivityManager!=null)connectivityManager.registerDefaultNetworkCallback(networkCallback);}catch(Exception ignored){}}\n    @Override protected void onStop(){try{if(connectivityManager!=null)connectivityManager.unregisterNetworkCallback(networkCallback);}catch(Exception ignored){}super.onStop();}\n    @Override protected void onResume(){super.onResume();if(Store.isSetup(this)){maybeCatchUp();syncIfSignedIn();if(root!=null){if(currentScreen.equals("daily"))showDaily();else if(currentScreen.equals("spending"))showSpending();else if(currentScreen.equals("tags"))showTags();else showMain();}}}
 }
