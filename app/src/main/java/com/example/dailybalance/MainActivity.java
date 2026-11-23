@@ -44,6 +44,7 @@ public class MainActivity extends Activity {
     private String currentScreen = "home";
     private int selectedHour = 0, selectedMinute = 0;
     private long rangeStart, rangeEnd;
+    private String homeSearchQuery = "";
     private final int ink=0xFF18352B, muted=0xFF718078, green=0xFF26734D, bg=0xFFF4F8F4, red=0xFFBA4A45, line=0xFFE1EAE2, paleGreen=0xFFE4F2E7;
 
     @Override public void onCreate(Bundle b) {
@@ -114,11 +115,21 @@ public class MainActivity extends Activity {
         TextView editHint=text("Tap to edit starting balance",11,muted);editHint.setGravity(Gravity.CENTER);LinearLayout.LayoutParams ehp=new LinearLayout.LayoutParams(-1,-2);ehp.topMargin=dp(5);balanceBox.addView(editHint,ehp);
         balanceCard.addView(balanceBox);LinearLayout.LayoutParams bcp=new LinearLayout.LayoutParams(-1,-2);bcp.topMargin=dp(12);bcp.bottomMargin=dp(18);root.addView(balanceCard,bcp);
         balanceCard.setOnClickListener(v->showOpeningBalanceDialog());balanceCard.setClickable(true);balanceCard.setFocusable(true);balanceCard.setForeground(getDrawable(android.R.drawable.list_selector_background));
-        TextView txTitle=text("Transactions",18,ink);txTitle.setTypeface(null,1);root.addView(txTitle);
+        LinearLayout txHeading=row();
+        TextView txTitle=text("Transactions",18,ink);txTitle.setTypeface(null,1);
+        txHeading.addView(txTitle,new LinearLayout.LayoutParams(0,-2,1));
+        Button search=button("⌕");
+        search.setTextSize(22);search.setContentDescription("Search transactions");
+        search.setMinWidth(dp(44));search.setMinimumWidth(dp(44));
+        txHeading.addView(search);
+        search.setOnClickListener(v->showTransactionSearch());
+        root.addView(txHeading);
         ScrollView scroll=new ScrollView(this);LinearLayout.LayoutParams scp=new LinearLayout.LayoutParams(-1,0,1);scp.topMargin=dp(5);root.addView(scroll,scp);LinearLayout list=column();scroll.addView(list);
         JSONArray arr=Store.transactions(this);
         if(arr.length()==0){TextView empty=text("No transactions yet",14,muted);pad(empty,0,24,0,24);list.addView(empty);}
+        else if(!homeSearchQuery.isEmpty()&&countMatchingTransactions(arr,homeSearchQuery)==0){TextView empty=text("No matching transactions",14,muted);pad(empty,0,24,0,24);list.addView(empty);}
         for(int i=0;i<arr.length();i++)try{JSONObject o=arr.getJSONObject(i);String desc=o.optString("description","Transaction"),tag=o.optString("tag","");double amt=o.optDouble("amount",0);long time=o.optLong("time",0);
+            if(!homeSearchQuery.isEmpty()&&!desc.toLowerCase(Locale.ROOT).contains(homeSearchQuery.toLowerCase(Locale.ROOT))&&!tag.toLowerCase(Locale.ROOT).contains(homeSearchQuery.toLowerCase(Locale.ROOT)))continue;
             LinearLayout item=row();pad(item,0,11,0,11);LinearLayout details=column();TextView d=text(desc,15,ink);d.setTypeface(null,1);details.addView(d);String meta=(tag.isEmpty()?"":Store.tagIcon(this,tag)+"  "+tag+"   ·   ")+Store.date(time);TextView date=text(meta,11,muted);LinearLayout.LayoutParams dp2=new LinearLayout.LayoutParams(-2,-2);dp2.topMargin=dp(4);details.addView(date,dp2);item.addView(details,new LinearLayout.LayoutParams(0,-2,1));TextView value=text((amt>=0?"+ ":"− ")+Store.money(Math.abs(amt)),13,amt>=0?green:red);value.setTypeface(null,1);item.addView(value);
             // Restore tap-to-edit interaction. Capture the current array index and transaction snapshot.
             final int transactionIndex=i; final JSONObject transaction=o;
@@ -139,6 +150,25 @@ public class MainActivity extends Activity {
         box.addView(amount);box.addView(desc);box.addView(tag);LinearLayout.LayoutParams debitParams=new LinearLayout.LayoutParams(-1,-2);debitParams.topMargin=dp(8);box.addView(debit,debitParams);
         new MaterialAlertDialogBuilder(this).setTitle("Add transaction").setView(box).setNegativeButton("Cancel",null).setPositiveButton("Add",(d,w)->{Double n=number(amount.getText().toString());String label=desc.getText().toString().trim(),tagName=tag.getText().toString().trim();if(n==null||n<=0||label.isEmpty()){Toast.makeText(this,"Enter an amount and description",Toast.LENGTH_SHORT).show();return;}if(!tagName.isEmpty()&&!Store.hasTag(this,tagName))Store.saveTag(this,tagName,"🏷️");double signedAmount=debit.isChecked()?-n:n;Store.addTransaction(this,label,signedAmount,System.currentTimeMillis(),tagName);showMain();}).show();
     }
+
+    private int countMatchingTransactions(JSONArray arr,String query){
+        int count=0;String q=query.toLowerCase(Locale.ROOT);
+        for(int i=0;i<arr.length();i++){JSONObject o=arr.optJSONObject(i);if(o==null)continue;
+            if(o.optString("description","").toLowerCase(Locale.ROOT).contains(q)||o.optString("tag","").toLowerCase(Locale.ROOT).contains(q))count++;
+        }
+        return count;
+    }
+    private void showTransactionSearch(){
+        EditText query=field("Search descriptions or tags",false);
+        query.setText(homeSearchQuery);
+        LinearLayout box=column();pad(box,20,4,20,0);box.addView(query);
+        new MaterialAlertDialogBuilder(this).setTitle("Search transactions").setView(box)
+            .setNegativeButton("Cancel",null)
+            .setNeutralButton("Clear",(d,w)->{homeSearchQuery="";showMain();})
+            .setPositiveButton("Search",(d,w)->{homeSearchQuery=query.getText().toString().trim();showMain();})
+            .show();
+    }
+
     private void showDaily(){
         pageBase("daily","Daily income");
         ScrollView content=new ScrollView(this);LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,0,1);root.addView(content,cp);
@@ -155,7 +185,11 @@ public class MainActivity extends Activity {
     private void showSpending(){
         pageBase("spending","Spending by tag");
         TextView range=text("DATE RANGE",10,muted);LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,-2);rp.topMargin=dp(12);root.addView(range,rp);
-        LinearLayout dates=row();Button from=button("From: "+shortDate(rangeStart)),to=button("To: "+shortDate(rangeEnd));dates.addView(from,new LinearLayout.LayoutParams(0,-2,1));dates.addView(to,new LinearLayout.LayoutParams(0,-2,1));root.addView(dates);
+        LinearLayout dates=row();Button from=button("From: "+shortDate(rangeStart)),to=button("To: "+shortDate(rangeEnd));LinearLayout.LayoutParams fromParams=new LinearLayout.LayoutParams(0,-2,1);
+        fromParams.rightMargin=dp(6);
+        LinearLayout.LayoutParams toParams=new LinearLayout.LayoutParams(0,-2,1);
+        toParams.leftMargin=dp(6);
+        dates.addView(from,fromParams);dates.addView(to,toParams);root.addView(dates);
         from.setOnClickListener(v->pickDate(true,from,to));to.setOnClickListener(v->pickDate(false,from,to));
         ScrollView scroll=new ScrollView(this);LinearLayout.LayoutParams scp=new LinearLayout.LayoutParams(-1,0,1);scp.topMargin=dp(12);root.addView(scroll,scp);LinearLayout list=column();scroll.addView(list);
         java.util.LinkedHashMap<String,Double> totals=new java.util.LinkedHashMap<>();JSONArray tx=Store.transactions(this);
@@ -169,7 +203,10 @@ public class MainActivity extends Activity {
         pageBase("tags","Manage tags");Button add=button("+ Add tag");LinearLayout.LayoutParams ap=new LinearLayout.LayoutParams(-1,-2);ap.topMargin=dp(12);root.addView(add,ap);add.setOnClickListener(v->showTagEditor(null,null));
         ScrollView scroll=new ScrollView(this);LinearLayout.LayoutParams scp=new LinearLayout.LayoutParams(-1,0,1);scp.topMargin=dp(8);root.addView(scroll,scp);LinearLayout list=column();scroll.addView(list);JSONArray arr=Store.tags(this);
         if(arr.length()==0){TextView empty=text("No tags yet. Add a tag here or type one when adding an expense.",14,muted);pad(empty,0,20,0,20);list.addView(empty);}
-        for(int i=0;i<arr.length();i++){JSONObject o=arr.optJSONObject(i);if(o==null)continue;String name=o.optString("name"),icon=o.optString("icon","🏷️");LinearLayout item=row();pad(item,0,10,0,10);TextView ico=text(icon,22,ink);item.addView(ico);TextView nm=text(name,15,ink);nm.setTypeface(null,1);LinearLayout.LayoutParams nmp=new LinearLayout.LayoutParams(0,-2,1);nmp.leftMargin=dp(12);item.addView(nm,nmp);Button edit=button("Edit");edit.setTextSize(12);item.addView(edit);Button del=button("Delete");del.setTextSize(12);del.setTextColor(red);item.addView(del);edit.setOnClickListener(v->showTagEditor(name,icon));del.setOnClickListener(v->new MaterialAlertDialogBuilder(this).setTitle("Delete tag?").setMessage("Transactions using this tag will remain, but become untagged.").setNegativeButton("Cancel",null).setPositiveButton("Delete",(d,w)->{Store.deleteTag(this,name);showTags();}).show());list.addView(item);View divider=new View(this);divider.setBackgroundColor(line);list.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));}
+        for(int i=0;i<arr.length();i++){JSONObject o=arr.optJSONObject(i);if(o==null)continue;String name=o.optString("name"),icon=o.optString("icon","🏷️");LinearLayout item=row();pad(item,0,10,0,10);TextView ico=text(icon,22,ink);item.addView(ico);TextView nm=text(name,15,ink);nm.setTypeface(null,1);LinearLayout.LayoutParams nmp=new LinearLayout.LayoutParams(0,-2,1);nmp.leftMargin=dp(12);item.addView(nm,nmp);Button edit=button("✎");edit.setTextSize(18);edit.setContentDescription("Edit "+name);
+            LinearLayout.LayoutParams editParams=new LinearLayout.LayoutParams(dp(42),dp(40));editParams.leftMargin=dp(6);item.addView(edit,editParams);
+            Button del=button("🗑");del.setTextSize(16);del.setContentDescription("Delete "+name);del.setTextColor(red);
+            LinearLayout.LayoutParams deleteParams=new LinearLayout.LayoutParams(dp(42),dp(40));deleteParams.leftMargin=dp(6);item.addView(del,deleteParams);edit.setOnClickListener(v->showTagEditor(name,icon));del.setOnClickListener(v->new MaterialAlertDialogBuilder(this).setTitle("Delete tag?").setMessage("Transactions using this tag will remain, but become untagged.").setNegativeButton("Cancel",null).setPositiveButton("Delete",(d,w)->{Store.deleteTag(this,name);showTags();}).show());list.addView(item);View divider=new View(this);divider.setBackgroundColor(line);list.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));}
         addNav();setContentView(root);
     }
     private void showTransactionEditor(int index, JSONObject transaction){
