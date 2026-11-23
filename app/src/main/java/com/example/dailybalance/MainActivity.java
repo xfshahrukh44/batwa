@@ -147,12 +147,12 @@ public class MainActivity extends Activity {
         currentScreen="home";root=column();root.setBackgroundColor(bg);safeInsets(root,20,14,8);
         LinearLayout top=row();top.setGravity(Gravity.CENTER_VERTICAL);
         FirebaseAuth auth=FirebaseAuth.getInstance();
-        String accountLabel=auth.getCurrentUser()==null?"Sign in":"â˜ "+(auth.getCurrentUser().getEmail()==null?"Account":auth.getCurrentUser().getEmail());
+        String accountLabel=auth.getCurrentUser()==null?"Sign in":"\\u2601 "+(auth.getCurrentUser().getEmail()==null?"Account":auth.getCurrentUser().getEmail());
         Button account=button(accountLabel);account.setTextSize(11);top.addView(account,new LinearLayout.LayoutParams(0,dp(42),1));account.setOnClickListener(v->showAccountDialog());
         View topSpace=new View(this);top.addView(topSpace,new LinearLayout.LayoutParams(dp(6),1));
-        Button theme=button(darkMode?"â˜€":"â˜¾");theme.setContentDescription("Toggle dark mode");theme.setMinWidth(dp(42));theme.setMinimumWidth(dp(42));top.addView(theme);theme.setOnClickListener(v->toggleDarkMode());
+        Button theme=button(darkMode?"\\u2600":"\\u263E");theme.setContentDescription("Toggle dark mode");theme.setMinWidth(dp(42));theme.setMinimumWidth(dp(42));top.addView(theme);theme.setOnClickListener(v->toggleDarkMode());
         View themeSpace=new View(this);top.addView(themeSpace,new LinearLayout.LayoutParams(dp(6),1));
-        Button add=button("ï¼‹  Add transaction");add.setTextColor(0xFFFFFFFF);top.addView(add);root.addView(top,new LinearLayout.LayoutParams(-1,-2));add.setOnClickListener(v->showExpenseDialog());
+        Button add=button("+  Add transaction");add.setTextColor(0xFFFFFFFF);top.addView(add);root.addView(top,new LinearLayout.LayoutParams(-1,-2));add.setOnClickListener(v->showExpenseDialog());
         syncIfSignedIn();
         MaterialCardView balanceCard=card();balanceCard.setCardBackgroundColor(paleGreen);LinearLayout balanceBox=column();pad(balanceBox,18,18,18,18);
         TextView label=text("CURRENT BALANCE",11,muted);label.setGravity(Gravity.CENTER);balanceBox.addView(label);
@@ -163,7 +163,7 @@ public class MainActivity extends Activity {
         LinearLayout txHeading=row();
         TextView txTitle=text("Transactions",18,ink);txTitle.setTypeface(null,1);
         txHeading.addView(txTitle,new LinearLayout.LayoutParams(0,-2,1));
-        Button search=button("âŒ•");
+        Button search=button("\\u2315");
         search.setTextSize(22);search.setContentDescription("Search transactions");
         search.setMinWidth(dp(44));search.setMinimumWidth(dp(44));
         txHeading.addView(search);
@@ -193,7 +193,7 @@ public class MainActivity extends Activity {
         JSONArray tags=Store.tags(this);String[] names=new String[tags.length()];for(int i=0;i<tags.length();i++)names[i]=tags.optJSONObject(i).optString("name");tag.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_dropdown_item_1line,names));
         CheckBox debit=new CheckBox(this);debit.setText("Debit (subtract from balance)");debit.setTextColor(ink);debit.setTextSize(14);debit.setButtonTintList(ColorStateList.valueOf(green));debit.setChecked(true);
         box.addView(amount);box.addView(desc);box.addView(tag);LinearLayout.LayoutParams debitParams=new LinearLayout.LayoutParams(-1,-2);debitParams.topMargin=dp(8);box.addView(debit,debitParams);
-        new MaterialAlertDialogBuilder(this).setTitle("Add transaction").setView(box).setNegativeButton("Cancel",null).setPositiveButton("Add",(d,w)->{Double n=number(amount.getText().toString());String label=desc.getText().toString().trim(),tagName=tag.getText().toString().trim();if(n==null||n<=0||label.isEmpty()){Toast.makeText(this,"Enter an amount and description",Toast.LENGTH_SHORT).show();return;}if(!tagName.isEmpty()&&!Store.hasTag(this,tagName))Store.saveTag(this,tagName,"ðŸ·ï¸");double signedAmount=debit.isChecked()?-n:n;Store.addTransaction(this,label,signedAmount,System.currentTimeMillis(),tagName);showMain();}).show();
+        new MaterialAlertDialogBuilder(this).setTitle("Add transaction").setView(box).setNegativeButton("Cancel",null).setPositiveButton("Add",(d,w)->{Double n=number(amount.getText().toString());String label=desc.getText().toString().trim(),tagName=tag.getText().toString().trim();if(n==null||n<=0||label.isEmpty()){Toast.makeText(this,"Enter an amount and description",Toast.LENGTH_SHORT).show();return;}if(!tagName.isEmpty()&&!Store.hasTag(this,tagName))Store.saveTag(this,tagName,"\\uD83C\\uDFF7\\uFE0F");double signedAmount=debit.isChecked()?-n:n;Store.addTransaction(this,label,signedAmount,System.currentTimeMillis(),tagName);showMain();}).show();
     }
 
 
@@ -294,7 +294,7 @@ public class MainActivity extends Activity {
             double amount=item.optDouble("amount",0);long time=item.optLong("time",0);
             h.description.setText(desc);
             h.meta.setText((tag.isEmpty()?"":Store.tagIcon(MainActivity.this,tag)+"  "+tag+"   Â·   ")+Store.date(time));
-            h.amount.setText((amount>=0?"+ ":"âˆ’ ")+Store.money(Math.abs(amount)));h.amount.setTextColor(amount>=0?green:red);
+            h.amount.setText((amount>=0?"+ ":"- ")+Store.money(Math.abs(amount)));h.amount.setTextColor(amount>=0?green:red);
             h.item.setForeground(getDrawable(android.R.drawable.list_selector_background));
             h.item.setOnClickListener(v->{if("Starting balance".equalsIgnoreCase(item.optString("description","")))showOpeningBalanceDialog();else showTransactionEditor(index,item);});
         }
@@ -329,8 +329,8 @@ public class MainActivity extends Activity {
         LinearLayout form=column();pad(form,0,4,0,8);content.addView(form);
         TextView hint=text("Automatically add this amount to your balance every day.",14,muted);form.addView(hint);
         EditText amount=field("Amount in PKR",true);amount.setText(Store.dailyEnabled(this)?String.valueOf(Store.dailyAmount(this)):"");LinearLayout.LayoutParams am=new LinearLayout.LayoutParams(-1,-2);am.topMargin=dp(24);form.addView(amount,am);
-        selectedHour=Store.dailyHour(this);selectedMinute=Store.dailyMinute(this);Button time=button("â—·   Time: "+String.format(Locale.US,"%02d:%02d",selectedHour,selectedMinute));LinearLayout.LayoutParams tm=new LinearLayout.LayoutParams(-1,-2);tm.topMargin=dp(14);form.addView(time,tm);
-        time.setOnClickListener(v->new TimePickerDialog(this,(view,h,m)->{selectedHour=h;selectedMinute=m;time.setText("â—·   Time: "+String.format(Locale.US,"%02d:%02d",h,m));},selectedHour,selectedMinute,true).show());
+        selectedHour=Store.dailyHour(this);selectedMinute=Store.dailyMinute(this);Button time=button("Time: "+String.format(Locale.US,"%02d:%02d",selectedHour,selectedMinute));LinearLayout.LayoutParams tm=new LinearLayout.LayoutParams(-1,-2);tm.topMargin=dp(14);form.addView(time,tm);
+        time.setOnClickListener(v->new TimePickerDialog(this,(view,h,m)->{selectedHour=h;selectedMinute=m;time.setText("Time: "+String.format(Locale.US,"%02d:%02d",h,m));},selectedHour,selectedMinute,true).show());
         Button save=button("Save daily income");LinearLayout.LayoutParams sm=new LinearLayout.LayoutParams(-1,-2);sm.topMargin=dp(18);form.addView(save,sm);
         TextView note=text("Daily credits are recorded as transactions. If Android delays an alarm, Batwa catches up when you next open the app.",12,muted);LinearLayout.LayoutParams np=new LinearLayout.LayoutParams(-1,-2);np.topMargin=dp(16);form.addView(note,np);
         save.setOnClickListener(v->{Double n=number(amount.getText().toString());if(n==null||n<=0){amount.setError("Enter a positive amount");return;}Store.saveDaily(this,n,selectedHour,selectedMinute);if(Build.VERSION.SDK_INT>=31&&!getSystemService(android.app.AlarmManager.class).canScheduleExactAlarms()){Intent intent=new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,Uri.parse("package:"+getPackageName()));startActivity(intent);Toast.makeText(this,"Allow alarms, then return to Batwa",Toast.LENGTH_LONG).show();}else Alarm.schedule(this);Toast.makeText(this,"Daily income saved",Toast.LENGTH_SHORT).show();showDaily();});
@@ -433,15 +433,18 @@ public class MainActivity extends Activity {
             TextView nm=text(name,15,ink);nm.setTypeface(null,1);
             LinearLayout.LayoutParams nmp=new LinearLayout.LayoutParams(0,-2,1);nmp.leftMargin=dp(12);item.addView(nm,nmp);
 
-            MaterialButton edit=(MaterialButton)button("");
-            edit.setIconResource(android.R.drawable.ic_menu_edit);edit.setIconTint(ColorStateList.valueOf(ink));edit.setIconSize(dp(20));
+            Button edit=button("EDIT");
+            edit.setTextSize(11);
             edit.setContentDescription("Edit "+name);
-            LinearLayout.LayoutParams editParams=new LinearLayout.LayoutParams(dp(42),dp(40));editParams.leftMargin=dp(6);item.addView(edit,editParams);
+            LinearLayout.LayoutParams editParams=new LinearLayout.LayoutParams(dp(58),dp(40));
+            editParams.leftMargin=dp(6);item.addView(edit,editParams);
 
-            MaterialButton del=(MaterialButton)button("");
-            del.setIconResource(android.R.drawable.ic_menu_delete);del.setIconTint(ColorStateList.valueOf(red));del.setIconSize(dp(20));
+            Button del=button("DELETE");
+            del.setTextSize(11);
+            del.setTextColor(red);
             del.setContentDescription("Delete "+name);
-            LinearLayout.LayoutParams deleteParams=new LinearLayout.LayoutParams(dp(42),dp(40));deleteParams.leftMargin=dp(6);item.addView(del,deleteParams);
+            LinearLayout.LayoutParams deleteParams=new LinearLayout.LayoutParams(dp(68),dp(40));
+            deleteParams.leftMargin=dp(6);item.addView(del,deleteParams);
             edit.setOnClickListener(v->showTagEditor(name,icon));
             del.setOnClickListener(v->new MaterialAlertDialogBuilder(this).setTitle("Delete tag?")
                     .setMessage("Transactions using this tag will remain, but become untagged.")
@@ -483,7 +486,7 @@ public class MainActivity extends Activity {
                 String desc=description.getText().toString().trim(),tagName=tag.getText().toString().trim();
                 if(n==null||n==0){amount.setError("Enter a non-zero amount");return;}
                 if(desc.isEmpty()){description.setError("Enter a description");return;}
-                if(!tagName.isEmpty()&&!Store.hasTag(this,tagName))Store.saveTag(this,tagName,"ðŸ·ï¸");
+                if(!tagName.isEmpty()&&!Store.hasTag(this,tagName))Store.saveTag(this,tagName,"\\uD83C\\uDFF7\\uFE0F");
                 Store.updateTransaction(this,index,desc,n,timestamp.getTimeInMillis(),tagName);
                 dialog.dismiss();showMain();
             });
@@ -498,7 +501,7 @@ public class MainActivity extends Activity {
     }
 
     private void showTagEditor(String oldName,String oldIcon){
-        boolean editing=oldName!=null;LinearLayout box=column();pad(box,20,4,20,0);EditText name=field("Tag name",false);if(editing)name.setText(oldName);box.addView(name);final String[] icon={editing?oldIcon:"ðŸ·ï¸"};Button choose=button("Choose icon  "+icon[0]);box.addView(choose);choose.setOnClickListener(v->showIconPicker(icon,choose));
+        boolean editing=oldName!=null;LinearLayout box=column();pad(box,20,4,20,0);EditText name=field("Tag name",false);if(editing)name.setText(oldName);box.addView(name);final String[] icon={editing?oldIcon:"\\uD83C\\uDFF7\\uFE0F"};Button choose=button("Choose icon  "+icon[0]);box.addView(choose);choose.setOnClickListener(v->showIconPicker(icon,choose));
         AlertDialog dialog=new MaterialAlertDialogBuilder(this).setTitle(editing?"Update tag":"New tag").setView(box).setNegativeButton("Cancel",null).setPositiveButton(editing?"Save":"Add",null).create();dialog.setOnShowListener(x->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{String n=name.getText().toString().trim();if(n.isEmpty()){name.setError("Enter a tag name");return;}if(Store.hasTag(this,n)&&(!editing||!n.equalsIgnoreCase(oldName))){name.setError("This tag already exists");return;}if(editing)Store.renameTag(this,oldName,n,icon[0]);else Store.saveTag(this,n,icon[0]);dialog.dismiss();showTags();}));dialog.show();
     }
 
