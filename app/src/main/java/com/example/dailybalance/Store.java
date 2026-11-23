@@ -215,6 +215,40 @@ public class Store {
         prefs(c).edit().putString("tags",next.toString()).apply();
         clearTagFromTransactions(c,name);
     }
+    /** Merge cloud records additively. Existing local rows are never discarded unless a deletion tombstone exists. */
+    static synchronized void mergeCloudData(Context c, JSONArray cloudTransactions, JSONArray cloudTags,
+            JSONArray cloudDeletedTransactions, JSONArray cloudDeletedTags) {
+        JSONArray localTransactions=transactions(c), localTags=tags(c);
+        java.util.Map<String,JSONObject> txMap=new java.util.LinkedHashMap<>();
+        java.util.Map<String,JSONObject> tagMap=new java.util.LinkedHashMap<>();
+        java.util.Set<String> deletedTx=new java.util.HashSet<>(), deletedTag=new java.util.HashSet<>();
+        JSONArray allDeletedTx=deletedTransactionTombstones(c), allDeletedTags=deletedTagTombstones(c);
+        for(int i=0;i<allDeletedTx.length();i++){JSONObject o=allDeletedTx.optJSONObject(i);if(o!=null&&!o.optString("id","").isEmpty())deletedTx.add(o.optString("id"));}
+        for(int i=0;i<cloudDeletedTransactions.length();i++){JSONObject o=cloudDeletedTransactions.optJSONObject(i);if(o!=null&&!o.optString("id","").isEmpty()){deletedTx.add(o.optString("id"));allDeletedTx.put(o);}}
+        for(int i=0;i<allDeletedTags.length();i++){JSONObject o=allDeletedTags.optJSONObject(i);if(o!=null&&!o.optString("id","").isEmpty())deletedTag.add(o.optString("id"));}
+        for(int i=0;i<cloudDeletedTags.length();i++){JSONObject o=cloudDeletedTags.optJSONObject(i);if(o!=null&&!o.optString("id","").isEmpty()){deletedTag.add(o.optString("id"));allDeletedTags.put(o);}}
+        for(int i=0;i<localTransactions.length();i++){JSONObject o=localTransactions.optJSONObject(i);if(o!=null)txMap.put(o.optString("id"),o);}
+        for(int i=0;i<cloudTransactions.length();i++){JSONObject o=cloudTransactions.optJSONObject(i);if(o==null)continue;String id=o.optString("id","");if(id.isEmpty()||deletedTx.contains(id))continue;JSONObject old=txMap.get(id);if(old==null||o.optLong("updatedAt",0)>old.optLong("updatedAt",0))txMap.put(id,o);}
+        double before=0,after=0;for(JSONObject o:localTransactionsAsList(localTransactions))before+=o.optDouble("amount",0);
+        JSONArray mergedTx=new JSONArray();
+        for(JSONObject o:txMap.values()){if(deletedTx.contains(o.optString("id","")))continue;mergedTx.put(o);after+=o.optDouble("amount",0);}
+        for(int i=0;i<localTags.length();i++){JSONObject o=localTags.optJSONObject(i);if(o!=null)tagMap.put(o.optString("id"),o);}
+        for(int i=0;i<cloudTags.length();i++){JSONObject o=cloudTags.optJSONObject(i);if(o==null)continue;String id=o.optString("id","");if(id.isEmpty()||deletedTag.contains(id))continue;JSONObject old=tagMap.get(id);if(old==null||o.optLong("updatedAt",0)>old.optLong("updatedAt",0))tagMap.put(id,o);}
+        JSONArray mergedTags=new JSONArray();for(JSONObject o:tagMap.values())if(!deletedTag.contains(o.optString("id","")))mergedTags.put(o);
+        // Remove tag references for tags deleted on any device.
+        for(int i=0;i<mergedTx.length();i++){JSONObject o=mergedTx.optJSONObject(i);if(o==null)continue;String tag=o.optString("tag","");for(int j=0;j<localTags.length();j++){JSONObject t=localTags.optJSONObject(j);if(t!=null&&deletedTag.contains(t.optString("id",""))&&t.optString("name","").equalsIgnoreCase(tag)){try{o.put("tag","");}catch(Exception ignored){}}}}
+        java.util.Collections.sort(localTransactionsAsList(mergedTx),(a,b)->Long.compare(b.optLong("time",0),a.optLong("time",0)));
+        prefs(c).edit().putString("transactions",mergedTx.toString()).putString("tags",mergedTags.toString())
+                .putString("deleted_transaction_ids",allDeletedTx.toString()).putString("deleted_tag_ids",allDeletedTags.toString())
+                .putLong("balance",Double.doubleToLongBits(balance(c)+(after-before))).apply();
+    }
+
+    private static java.util.List<JSONObject> localTransactionsAsList(JSONArray array) {
+        java.util.List<JSONObject> list=new java.util.ArrayList<>();
+        for(int i=0;i<array.length();i++){JSONObject o=array.optJSONObject(i);if(o!=null)list.add(o);}
+        return list;
+    }
+
     static String money(double n) { return "PKR " + String.format(Locale.US, "%,.2f", n); }
     static String date(long millis) { return new SimpleDateFormat("dd-MM-yy hh:mm a", Locale.US).format(new Date(millis)); }
     static double dailyAmount(Context c) { return Double.longBitsToDouble(prefs(c).getLong("daily_amount", Double.doubleToLongBits(0))); }
