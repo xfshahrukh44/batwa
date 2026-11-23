@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.example.dailybalance.app-mergeDebugResources-3:/values-port/values-port.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\Compouter Zonw\\.gradle\\caches\\8.9\\transforms\\d054dc34fbce7e5800afe2e8abe0d2bb\\transformed\\appcompat-1.6.1\\res\\values-port\\values-port.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "55",
+                        "endOffsets": "106"
+                    }
+                }
+            ]
+        }
+    ]
+}

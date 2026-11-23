@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "570115296380",
+    "project_id": "batwa-f920b",
+    "storage_bucket": "batwa-f920b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:570115296380:android:b0214bd587c17e68e08df9",
+        "android_client_info": {
+          "package_name": "com.example.dailybalance"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "570115296380-oh3kjvv5cdg2e6df9mgcr56d2kpe35cu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.dailybalance",
+            "certificate_hash": "b4d76f335c21798bd95afe87bf8c393dfc08323d"
+          }
+        },
+        {
+          "client_id": "570115296380-6adls6lkmbt15q7cr5481qu2mtk93anq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAlCObcXvaFBC_xDma0jiYnMYwnhp4Pc38"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "570115296380-6adls6lkmbt15q7cr5481qu2mtk93anq.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
