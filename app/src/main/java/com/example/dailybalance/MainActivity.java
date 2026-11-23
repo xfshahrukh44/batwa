@@ -290,7 +290,7 @@ public class MainActivity extends Activity {
         @Override public int getItemCount(){return visible.isEmpty()?1:visible.size();}
         final class Holder extends RecyclerView.ViewHolder{
             final LinearLayout item;final TextView description,meta,amount;
-            Holder(LinearLayout container,LinearLayout item,TextView description,TextView meta,TextView amount){super(container);this.item=item;this.description=description;this.meta=meta;this.amount=amount;}
+            Holder(View container,LinearLayout item,TextView description,TextView meta,TextView amount){super(container);this.item=item;this.description=description;this.meta=meta;this.amount=amount;}
         }
     }
 
