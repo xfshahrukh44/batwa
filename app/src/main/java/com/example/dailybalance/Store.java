@@ -7,6 +7,7 @@ import org.json.JSONObject;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+import java.util.UUID;
 
 /** Local persistence. Preference file and original keys intentionally remain unchanged for upgrades. */
 public class Store {
@@ -21,7 +22,7 @@ public class Store {
                 .putLong("balance", Double.doubleToLongBits(opening)).apply();
         JSONArray old = transactions(c), next = new JSONArray();
         try {
-            JSONObject item = new JSONObject(); item.put("description", "Starting balance");
+            JSONObject item = new JSONObject(); item.put("id", UUID.randomUUID().toString()); item.put("createdAt", System.currentTimeMillis()); item.put("updatedAt", System.currentTimeMillis()); item.put("description", "Starting balance");
             item.put("amount", opening); item.put("time", System.currentTimeMillis()); item.put("tag", ""); next.put(item);
             for (int i = 0; i < old.length(); i++) next.put(old.getJSONObject(i));
         } catch (Exception ignored) {}
@@ -74,15 +75,48 @@ public class Store {
                 .putLong("balance", Double.doubleToLongBits(adjustedBalance))
                 .putString("transactions", next.toString()).apply();
     }
-    static JSONArray transactions(Context c) {
-        try { return new JSONArray(prefs(c).getString("transactions", "[]")); }
+    /** Add stable IDs to legacy rows without changing existing transaction data. */
+    static synchronized JSONArray transactions(Context c) {
+        JSONArray result;
+        try { result = new JSONArray(prefs(c).getString("transactions", "[]")); }
+        catch (Exception e) { result = new JSONArray(); }
+        boolean changed = false;
+        for (int i = 0; i < result.length(); i++) {
+            JSONObject item = result.optJSONObject(i);
+            if (item == null || !item.optString("id", "").trim().isEmpty()) continue;
+            try {
+                item.put("id", UUID.randomUUID().toString());
+                item.put("createdAt", item.optLong("time", System.currentTimeMillis()));
+                item.put("updatedAt", System.currentTimeMillis());
+                changed = true;
+            } catch (Exception ignored) {}
+        }
+        if (changed) prefs(c).edit().putString("transactions", result.toString())
+                .putBoolean("transaction_ids_migrated", true).apply();
+        return result;
+    }
+
+    static JSONArray deletedTransactionTombstones(Context c) {
+        try { return new JSONArray(prefs(c).getString("deleted_transaction_ids", "[]")); }
         catch (Exception e) { return new JSONArray(); }
+    }
+
+    private static void recordDeletedTransaction(Context c, String id) {
+        if (id == null || id.isEmpty()) return;
+        JSONArray deleted = deletedTransactionTombstones(c);
+        try {
+            JSONObject tombstone = new JSONObject();
+            tombstone.put("id", id);
+            tombstone.put("deletedAt", System.currentTimeMillis());
+            deleted.put(tombstone);
+            prefs(c).edit().putString("deleted_transaction_ids", deleted.toString()).apply();
+        } catch (Exception ignored) {}
     }
     static void addTransaction(Context c, String description, double amount, long time) { addTransaction(c, description, amount, time, ""); }
     static void addTransaction(Context c, String description, double amount, long time, String tag) {
         JSONArray old = transactions(c); JSONArray next = new JSONArray();
         try {
-            JSONObject item = new JSONObject(); item.put("description", description); item.put("amount", amount); item.put("time", time); item.put("tag", tag == null ? "" : tag.trim()); next.put(item);
+            JSONObject item = new JSONObject(); item.put("id", UUID.randomUUID().toString()); item.put("createdAt", System.currentTimeMillis()); item.put("updatedAt", System.currentTimeMillis()); item.put("description", description); item.put("amount", amount); item.put("time", time); item.put("tag", tag == null ? "" : tag.trim()); next.put(item);
             for (int i = 0; i < old.length(); i++) next.put(old.getJSONObject(i));
         } catch (Exception ignored) {}
         double newBalance = balance(c) + amount;
@@ -96,7 +130,7 @@ public class Store {
             JSONObject item=old.optJSONObject(i);if(item==null)continue;
             if(i==index){
                 delta=amount-item.optDouble("amount",0);
-                try{item.put("description",description);item.put("amount",amount);item.put("time",time);item.put("tag",tag==null?"":tag.trim());}catch(Exception ignored){}
+                try{item.put("description",description);item.put("amount",amount);item.put("time",time);item.put("tag",tag==null?"":tag.trim());item.put("updatedAt",System.currentTimeMillis());}catch(Exception ignored){}
             }
             next.put(item);
         }
@@ -112,7 +146,7 @@ public class Store {
         JSONArray old=transactions(c), next=new JSONArray();double removed=0;
         for(int i=0;i<old.length();i++){
             JSONObject item=old.optJSONObject(i);if(item==null)continue;
-            if(i==index)removed=item.optDouble("amount",0);else next.put(item);
+            if(i==index){removed=item.optDouble("amount",0);recordDeletedTransaction(c,item.optString("id",""));}else next.put(item);
         }
         prefs(c).edit().putLong("balance",Double.doubleToLongBits(balance(c)-removed)).putString("transactions",next.toString()).apply();
     }
@@ -134,8 +168,23 @@ public class Store {
         for(int i=0;i<old.length();i++) try { JSONObject o=old.getJSONObject(i); if(o.optString("tag","").equalsIgnoreCase(name)) o.put("tag",""); next.put(o); } catch(Exception ignored){}
         prefs(c).edit().putString("transactions",next.toString()).apply();
     }
-    static JSONArray tags(Context c) {
-        try { return new JSONArray(prefs(c).getString("tags", "[]")); } catch(Exception e) { return new JSONArray(); }
+    static synchronized JSONArray tags(Context c) {
+        JSONArray result;
+        try { result = new JSONArray(prefs(c).getString("tags", "[]")); } catch(Exception e) { result = new JSONArray(); }
+        boolean changed = false;
+        for (int i=0;i<result.length();i++) {
+            JSONObject item=result.optJSONObject(i);
+            if(item==null || !item.optString("id","").trim().isEmpty()) continue;
+            try { item.put("id",UUID.randomUUID().toString()); item.put("updatedAt",System.currentTimeMillis()); changed=true; }
+            catch(Exception ignored) {}
+        }
+        if(changed) prefs(c).edit().putString("tags",result.toString()).putBoolean("tag_ids_migrated",true).apply();
+        return result;
+    }
+
+    static JSONArray deletedTagTombstones(Context c) {
+        try { return new JSONArray(prefs(c).getString("deleted_tag_ids", "[]")); }
+        catch(Exception e) { return new JSONArray(); }
     }
     static String tagIcon(Context c, String name) {
         JSONArray a=tags(c); for(int i=0;i<a.length();i++){JSONObject o=a.optJSONObject(i); if(o!=null && o.optString("name").equalsIgnoreCase(name)) return o.optString("icon","🏷️");} return "🏷️";
@@ -148,7 +197,23 @@ public class Store {
         prefs(c).edit().putString("tags",a.toString()).apply();
     }
     static void deleteTag(Context c,String name) {
-        JSONArray a=tags(c), next=new JSONArray(); for(int i=0;i<a.length();i++){JSONObject o=a.optJSONObject(i);if(o!=null&&!o.optString("name").equalsIgnoreCase(name))next.put(o);} prefs(c).edit().putString("tags",next.toString()).apply(); clearTagFromTransactions(c,name);
+        JSONArray a=tags(c), next=new JSONArray();
+        for(int i=0;i<a.length();i++){
+            JSONObject o=a.optJSONObject(i);
+            if(o==null) continue;
+            if(o.optString("name").equalsIgnoreCase(name)) {
+                try {
+                    JSONArray deleted=deletedTagTombstones(c);
+                    JSONObject tombstone=new JSONObject();
+                    tombstone.put("id",o.optString("id",""));
+                    tombstone.put("deletedAt",System.currentTimeMillis());
+                    deleted.put(tombstone);
+                    prefs(c).edit().putString("deleted_tag_ids",deleted.toString()).apply();
+                } catch(Exception ignored) {}
+            } else next.put(o);
+        }
+        prefs(c).edit().putString("tags",next.toString()).apply();
+        clearTagFromTransactions(c,name);
     }
     static String money(double n) { return "PKR " + String.format(Locale.US, "%,.2f", n); }
     static String date(long millis) { return new SimpleDateFormat("dd-MM-yy hh:mm a", Locale.US).format(new Date(millis)); }
