@@ -28,5 +28,8 @@ dependencies {
     implementation 'com.google.firebase:firebase-auth'
 
     // Cloud Firestore
-    implementation 'com.google.firebase:firebase-firestore'\n\n    // Google account sign-in\n    implementation 'com.google.android.gms:play-services-auth:21.3.0'
+    implementation 'com.google.firebase:firebase-firestore'
+
+    // Google account sign-in
+    implementation 'com.google.android.gms:play-services-auth:21.3.0'
 }

@@ -59,7 +59,7 @@ final class SyncManager {
             Store.mergeCloudData(context, transactions, tags, deletedTransactions, deletedTags, firstSyncForAccount);
             return uploadLocal(context, root).onSuccessTask(SYNC_EXECUTOR, ignored -> {
                 Store.markSyncComplete(context, user.getUid());
-                return Tasks.forResult(null);
+                return Tasks.<Void>forResult(null);
             });
         }).addOnCompleteListener(task -> {
             synchronized (SyncManager.class) { syncing = false; }

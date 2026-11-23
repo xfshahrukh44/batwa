@@ -488,5 +488,7 @@ public class MainActivity extends Activity {
     private String[] activeIconSelection;
     private Button activeIconTrigger;
 
-    @Override protected void onStart(){super.onStart();try{if(connectivityManager!=null)connectivityManager.registerDefaultNetworkCallback(networkCallback);}catch(Exception ignored){}}\n    @Override protected void onStop(){try{if(connectivityManager!=null)connectivityManager.unregisterNetworkCallback(networkCallback);}catch(Exception ignored){}super.onStop();}\n    @Override protected void onResume(){super.onResume();if(Store.isSetup(this)){maybeCatchUp();syncIfSignedIn();if(root!=null){if(currentScreen.equals("daily"))showDaily();else if(currentScreen.equals("spending"))showSpending();else if(currentScreen.equals("tags"))showTags();else showMain();}}}
+    @Override protected void onStart(){super.onStart();try{if(connectivityManager!=null)connectivityManager.registerDefaultNetworkCallback(networkCallback);}catch(Exception ignored){}}
+    @Override protected void onStop(){try{if(connectivityManager!=null)connectivityManager.unregisterNetworkCallback(networkCallback);}catch(Exception ignored){}super.onStop();}
+    @Override protected void onResume(){super.onResume();if(Store.isSetup(this)){maybeCatchUp();syncIfSignedIn();if(root!=null){if(currentScreen.equals("daily"))showDaily();else if(currentScreen.equals("spending"))showSpending();else if(currentScreen.equals("tags"))showTags();else showMain();}}}
 }
