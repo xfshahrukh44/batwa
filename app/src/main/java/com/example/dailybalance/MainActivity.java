@@ -32,6 +32,13 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.navigation.NavigationBarView;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.GoogleAuthProvider;
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.gms.common.api.ApiException;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.text.SimpleDateFormat;
@@ -45,10 +52,15 @@ public class MainActivity extends Activity {
     private int selectedHour = 0, selectedMinute = 0;
     private long rangeStart, rangeEnd;
     private String homeSearchQuery = "";
+    private GoogleSignInClient googleSignInClient;
+    private static final int RC_GOOGLE_SIGN_IN = 9107;
     private final int ink=0xFF18352B, muted=0xFF718078, green=0xFF26734D, bg=0xFFF4F8F4, red=0xFFBA4A45, line=0xFFE1EAE2, paleGreen=0xFFE4F2E7;
 
     @Override public void onCreate(Bundle b) {
         super.onCreate(b);
+        GoogleSignInOptions signInOptions = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestEmail().requestIdToken(getString(R.string.default_web_client_id)).build();
+        googleSignInClient = GoogleSignIn.getClient(this, signInOptions);
         getWindow().setStatusBarColor(bg); getWindow().setNavigationBarColor(bg);
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
         Store.migrateOpeningBalance(this);
@@ -108,7 +120,13 @@ public class MainActivity extends Activity {
     }
     private void showMain(){
         currentScreen="home";root=column();root.setBackgroundColor(bg);safeInsets(root,20,14,8);
-        LinearLayout top=row();top.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);Button add=button("＋  Add transaction");add.setTextColor(0xFFFFFFFF);top.addView(add);root.addView(top,new LinearLayout.LayoutParams(-1,-2));add.setOnClickListener(v->showExpenseDialog());
+        LinearLayout top=row();top.setGravity(Gravity.CENTER_VERTICAL);
+        FirebaseAuth auth=FirebaseAuth.getInstance();
+        String accountLabel=auth.getCurrentUser()==null?"Sign in":"☁ "+(auth.getCurrentUser().getEmail()==null?"Account":auth.getCurrentUser().getEmail());
+        Button account=button(accountLabel);account.setTextSize(11);top.addView(account,new LinearLayout.LayoutParams(0,dp(42),1));account.setOnClickListener(v->showAccountDialog());
+        View topSpace=new View(this);top.addView(topSpace,new LinearLayout.LayoutParams(dp(8),1));
+        Button add=button("＋  Add transaction");add.setTextColor(0xFFFFFFFF);top.addView(add);root.addView(top,new LinearLayout.LayoutParams(-1,-2));add.setOnClickListener(v->showExpenseDialog());
+        syncIfSignedIn();
         MaterialCardView balanceCard=card();balanceCard.setCardBackgroundColor(paleGreen);LinearLayout balanceBox=column();pad(balanceBox,18,18,18,18);
         TextView label=text("CURRENT BALANCE",11,muted);label.setGravity(Gravity.CENTER);balanceBox.addView(label);
         TextView balance=text(Store.money(Store.balance(this)),30,green);balance.setGravity(Gravity.CENTER);balance.setTypeface(null,1);LinearLayout.LayoutParams blp=new LinearLayout.LayoutParams(-1,-2);blp.topMargin=dp(5);balanceBox.addView(balance,blp);
@@ -149,6 +167,52 @@ public class MainActivity extends Activity {
         CheckBox debit=new CheckBox(this);debit.setText("Debit (subtract from balance)");debit.setTextColor(ink);debit.setTextSize(14);debit.setButtonTintList(ColorStateList.valueOf(green));debit.setChecked(true);
         box.addView(amount);box.addView(desc);box.addView(tag);LinearLayout.LayoutParams debitParams=new LinearLayout.LayoutParams(-1,-2);debitParams.topMargin=dp(8);box.addView(debit,debitParams);
         new MaterialAlertDialogBuilder(this).setTitle("Add transaction").setView(box).setNegativeButton("Cancel",null).setPositiveButton("Add",(d,w)->{Double n=number(amount.getText().toString());String label=desc.getText().toString().trim(),tagName=tag.getText().toString().trim();if(n==null||n<=0||label.isEmpty()){Toast.makeText(this,"Enter an amount and description",Toast.LENGTH_SHORT).show();return;}if(!tagName.isEmpty()&&!Store.hasTag(this,tagName))Store.saveTag(this,tagName,"🏷️");double signedAmount=debit.isChecked()?-n:n;Store.addTransaction(this,label,signedAmount,System.currentTimeMillis(),tagName);showMain();}).show();
+    }
+
+
+    private void syncIfSignedIn(){
+        if(FirebaseAuth.getInstance().getCurrentUser()!=null){
+            SyncManager.sync(this).addOnFailureListener(error ->
+                    Toast.makeText(this,"Sync paused: "+error.getMessage(),Toast.LENGTH_LONG).show());
+        }
+    }
+
+    private void showAccountDialog(){
+        if(FirebaseAuth.getInstance().getCurrentUser()==null){
+            startActivityForResult(googleSignInClient.getSignInIntent(),RC_GOOGLE_SIGN_IN);
+            return;
+        }
+        String email=FirebaseAuth.getInstance().getCurrentUser().getEmail();
+        new MaterialAlertDialogBuilder(this).setTitle("Batwa cloud sync")
+                .setMessage("Signed in as "+(email==null?"your Google account":email)+".\nYour transactions and tags sync through your private Firestore account.")
+                .setPositiveButton("Sync now",(d,w)->SyncManager.sync(this)
+                        .addOnSuccessListener(v->Toast.makeText(this,"Batwa is up to date",Toast.LENGTH_SHORT).show())
+                        .addOnFailureListener(e->Toast.makeText(this,"Sync failed: "+e.getMessage(),Toast.LENGTH_LONG).show()))
+                .setNeutralButton("Sign out",(d,w)->{
+                    FirebaseAuth.getInstance().signOut();
+                    googleSignInClient.signOut();
+                    Toast.makeText(this,"Signed out. Local data remains on this device.",Toast.LENGTH_LONG).show();
+                    showMain();
+                }).setNegativeButton("Close",null).show();
+    }
+
+    @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){
+        super.onActivityResult(requestCode,resultCode,data);
+        if(requestCode!=RC_GOOGLE_SIGN_IN)return;
+        try{
+            GoogleSignInAccount account=GoogleSignIn.getSignedInAccountFromIntent(data).getResult(ApiException.class);
+            if(account==null||account.getIdToken()==null)throw new IllegalStateException("Google did not return an ID token. Check the Firebase web OAuth client configuration.");
+            com.google.firebase.auth.AuthCredential credential=GoogleAuthProvider.getCredential(account.getIdToken(),null);
+            FirebaseAuth.getInstance().signInWithCredential(credential)
+                    .addOnSuccessListener(result->SyncManager.sync(this)
+                            .addOnSuccessListener(v->{Toast.makeText(this,"Google account connected and Batwa synced",Toast.LENGTH_LONG).show();showMain();})
+                            .addOnFailureListener(e->Toast.makeText(this,"Signed in, but sync failed: "+e.getMessage(),Toast.LENGTH_LONG).show()))
+                    .addOnFailureListener(e->Toast.makeText(this,"Sign-in failed: "+e.getMessage(),Toast.LENGTH_LONG).show());
+        }catch(ApiException e){
+            Toast.makeText(this,"Google sign-in cancelled or failed: "+e.getStatusCode(),Toast.LENGTH_LONG).show();
+        }catch(Exception e){
+            Toast.makeText(this,"Google sign-in failed: "+e.getMessage(),Toast.LENGTH_LONG).show();
+        }
     }
 
     private int countMatchingTransactions(JSONArray arr,String query){
@@ -334,5 +398,5 @@ public class MainActivity extends Activity {
     private String[] activeIconSelection;
     private Button activeIconTrigger;
 
-    @Override protected void onResume(){super.onResume();if(Store.isSetup(this)){maybeCatchUp();if(root!=null){if(currentScreen.equals("daily"))showDaily();else if(currentScreen.equals("spending"))showSpending();else if(currentScreen.equals("tags"))showTags();else showMain();}}}
+    @Override protected void onResume(){super.onResume();if(Store.isSetup(this)){maybeCatchUp();syncIfSignedIn();if(root!=null){if(currentScreen.equals("daily"))showDaily();else if(currentScreen.equals("spending"))showSpending();else if(currentScreen.equals("tags"))showTags();else showMain();}}}
 }
