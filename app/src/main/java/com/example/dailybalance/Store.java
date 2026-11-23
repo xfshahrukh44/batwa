@@ -224,9 +224,9 @@ public class Store {
         java.util.Set<String> deletedTx=new java.util.HashSet<>(), deletedTag=new java.util.HashSet<>();
         JSONArray allDeletedTx=deletedTransactionTombstones(c), allDeletedTags=deletedTagTombstones(c);
         for(int i=0;i<allDeletedTx.length();i++){JSONObject o=allDeletedTx.optJSONObject(i);if(o!=null&&!o.optString("id","").isEmpty())deletedTx.add(o.optString("id"));}
-        for(int i=0;i<cloudDeletedTransactions.length();i++){JSONObject o=cloudDeletedTransactions.optJSONObject(i);if(o!=null&&!o.optString("id","").isEmpty()){deletedTx.add(o.optString("id"));allDeletedTx.put(o);}}
+        for(int i=0;i<cloudDeletedTransactions.length();i++){JSONObject o=cloudDeletedTransactions.optJSONObject(i);if(o!=null&&!o.optString("id","").isEmpty()&&deletedTx.add(o.optString("id"))){allDeletedTx.put(o);}}
         for(int i=0;i<allDeletedTags.length();i++){JSONObject o=allDeletedTags.optJSONObject(i);if(o!=null&&!o.optString("id","").isEmpty())deletedTag.add(o.optString("id"));}
-        for(int i=0;i<cloudDeletedTags.length();i++){JSONObject o=cloudDeletedTags.optJSONObject(i);if(o!=null&&!o.optString("id","").isEmpty()){deletedTag.add(o.optString("id"));allDeletedTags.put(o);}}
+        for(int i=0;i<cloudDeletedTags.length();i++){JSONObject o=cloudDeletedTags.optJSONObject(i);if(o!=null&&!o.optString("id","").isEmpty()&&deletedTag.add(o.optString("id"))){allDeletedTags.put(o);}}
         for(int i=0;i<localTransactions.length();i++){JSONObject o=localTransactions.optJSONObject(i);if(o!=null)txMap.put(o.optString("id"),o);}
         for(int i=0;i<cloudTransactions.length();i++){JSONObject o=cloudTransactions.optJSONObject(i);if(o==null)continue;String id=o.optString("id","");if(id.isEmpty()||deletedTx.contains(id))continue;JSONObject old=txMap.get(id);if(old==null||o.optLong("updatedAt",0)>old.optLong("updatedAt",0))txMap.put(id,o);}
         double before=0,after=0;for(JSONObject o:localTransactionsAsList(localTransactions))before+=o.optDouble("amount",0);
