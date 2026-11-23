@@ -9,6 +9,7 @@ import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.SetOptions;
+import com.google.firebase.firestore.WriteBatch;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.util.ArrayList;
@@ -71,21 +72,33 @@ final class SyncManager {
     }
 
     private static Task<Void> uploadLocal(Context context, CollectionReference root) {
-        List<Task<Void>> writes = new ArrayList<>();
-        addWrites(writes, root.document("transactions").collection("items"), Store.transactions(context));
-        addWrites(writes, root.document("tags").collection("items"), Store.tags(context));
-        addWrites(writes, root.document("deletedTransactions").collection("items"), Store.deletedTransactionTombstones(context));
-        addWrites(writes, root.document("deletedTags").collection("items"), Store.deletedTagTombstones(context));
-        return Tasks.whenAll(writes);
+        List<Task<Void>> commits = new ArrayList<>();
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        WriteBatch[] batch = new WriteBatch[]{db.batch()};
+        int[] count = new int[]{0};
+        addWrites(commits, batch, count, root.document("transactions").collection("items"), Store.transactions(context));
+        addWrites(commits, batch, count, root.document("tags").collection("items"), Store.tags(context));
+        addWrites(commits, batch, count, root.document("deletedTransactions").collection("items"), Store.deletedTransactionTombstones(context));
+        addWrites(commits, batch, count, root.document("deletedTags").collection("items"), Store.deletedTagTombstones(context));
+        if (count[0] > 0) commits.add(batch[0].commit());
+        return Tasks.whenAll(commits);
     }
 
-    private static void addWrites(List<Task<Void>> writes, CollectionReference collection, JSONArray records) {
+    // Firestore limits each batch to 500 writes; use 450 to leave room for future metadata writes.
+    private static void addWrites(List<Task<Void>> commits, WriteBatch[] batch, int[] count,
+                                  CollectionReference collection, JSONArray records) {
         for (int i = 0; i < records.length(); i++) {
             JSONObject record = records.optJSONObject(i);
             if (record == null) continue;
             String id = record.optString("id", "");
             if (id.isEmpty()) continue;
-            writes.add(collection.document(id).set(recordToMap(record), SetOptions.merge()));
+            if (count[0] == 450) {
+                commits.add(batch[0].commit());
+                batch[0] = FirebaseFirestore.getInstance().batch();
+                count[0] = 0;
+            }
+            batch[0].set(collection.document(id), recordToMap(record), SetOptions.merge());
+            count[0]++;
         }
     }
 
