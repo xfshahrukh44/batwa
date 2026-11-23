@@ -147,12 +147,12 @@ public class MainActivity extends Activity {
         currentScreen="home";root=column();root.setBackgroundColor(bg);safeInsets(root,20,14,8);
         LinearLayout top=row();top.setGravity(Gravity.CENTER_VERTICAL);
         FirebaseAuth auth=FirebaseAuth.getInstance();
-        String accountLabel=auth.getCurrentUser()==null?"Sign in":"☁ "+(auth.getCurrentUser().getEmail()==null?"Account":auth.getCurrentUser().getEmail());
+        String accountLabel=auth.getCurrentUser()==null?"Sign in":"â˜ "+(auth.getCurrentUser().getEmail()==null?"Account":auth.getCurrentUser().getEmail());
         Button account=button(accountLabel);account.setTextSize(11);top.addView(account,new LinearLayout.LayoutParams(0,dp(42),1));account.setOnClickListener(v->showAccountDialog());
         View topSpace=new View(this);top.addView(topSpace,new LinearLayout.LayoutParams(dp(6),1));
-        Button theme=button(darkMode?"☀":"☾");theme.setContentDescription("Toggle dark mode");theme.setMinWidth(dp(42));theme.setMinimumWidth(dp(42));top.addView(theme);theme.setOnClickListener(v->toggleDarkMode());
+        Button theme=button(darkMode?"â˜€":"â˜¾");theme.setContentDescription("Toggle dark mode");theme.setMinWidth(dp(42));theme.setMinimumWidth(dp(42));top.addView(theme);theme.setOnClickListener(v->toggleDarkMode());
         View themeSpace=new View(this);top.addView(themeSpace,new LinearLayout.LayoutParams(dp(6),1));
-        Button add=button("＋  Add transaction");add.setTextColor(0xFFFFFFFF);top.addView(add);root.addView(top,new LinearLayout.LayoutParams(-1,-2));add.setOnClickListener(v->showExpenseDialog());
+        Button add=button("ï¼‹  Add transaction");add.setTextColor(0xFFFFFFFF);top.addView(add);root.addView(top,new LinearLayout.LayoutParams(-1,-2));add.setOnClickListener(v->showExpenseDialog());
         syncIfSignedIn();
         MaterialCardView balanceCard=card();balanceCard.setCardBackgroundColor(paleGreen);LinearLayout balanceBox=column();pad(balanceBox,18,18,18,18);
         TextView label=text("CURRENT BALANCE",11,muted);label.setGravity(Gravity.CENTER);balanceBox.addView(label);
@@ -163,7 +163,7 @@ public class MainActivity extends Activity {
         LinearLayout txHeading=row();
         TextView txTitle=text("Transactions",18,ink);txTitle.setTypeface(null,1);
         txHeading.addView(txTitle,new LinearLayout.LayoutParams(0,-2,1));
-        Button search=button("⌕");
+        Button search=button("âŒ•");
         search.setTextSize(22);search.setContentDescription("Search transactions");
         search.setMinWidth(dp(44));search.setMinimumWidth(dp(44));
         txHeading.addView(search);
@@ -189,11 +189,11 @@ public class MainActivity extends Activity {
         new MaterialAlertDialogBuilder(this).setTitle("Edit starting balance").setMessage("Changing this amount adjusts your current balance by the difference. Your expenses and daily credits remain unchanged.").setView(box).setNegativeButton("Cancel",null).setPositiveButton("Save",(d,w)->{Double n=number(amount.getText().toString());if(n==null||n<0){Toast.makeText(this,"Enter a valid amount",Toast.LENGTH_SHORT).show();return;}Store.changeOpeningBalance(this,n);showMain();}).show();
     }
     private void showExpenseDialog(){
-        LinearLayout box=column();pad(box,20,2,20,0);EditText amount=field("Amount (PKR)",true);EditText desc=field("Description",false);AutoCompleteTextView tag=new AutoCompleteTextView(this);tag.setSingleLine(true);tag.setHint("Tag (optional — creates new tags)");tag.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        LinearLayout box=column();pad(box,20,2,20,0);EditText amount=field("Amount (PKR)",true);EditText desc=field("Description",false);AutoCompleteTextView tag=new AutoCompleteTextView(this);tag.setSingleLine(true);tag.setHint("Tag (optional â€” creates new tags)");tag.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         JSONArray tags=Store.tags(this);String[] names=new String[tags.length()];for(int i=0;i<tags.length();i++)names[i]=tags.optJSONObject(i).optString("name");tag.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_dropdown_item_1line,names));
         CheckBox debit=new CheckBox(this);debit.setText("Debit (subtract from balance)");debit.setTextColor(ink);debit.setTextSize(14);debit.setButtonTintList(ColorStateList.valueOf(green));debit.setChecked(true);
         box.addView(amount);box.addView(desc);box.addView(tag);LinearLayout.LayoutParams debitParams=new LinearLayout.LayoutParams(-1,-2);debitParams.topMargin=dp(8);box.addView(debit,debitParams);
-        new MaterialAlertDialogBuilder(this).setTitle("Add transaction").setView(box).setNegativeButton("Cancel",null).setPositiveButton("Add",(d,w)->{Double n=number(amount.getText().toString());String label=desc.getText().toString().trim(),tagName=tag.getText().toString().trim();if(n==null||n<=0||label.isEmpty()){Toast.makeText(this,"Enter an amount and description",Toast.LENGTH_SHORT).show();return;}if(!tagName.isEmpty()&&!Store.hasTag(this,tagName))Store.saveTag(this,tagName,"🏷️");double signedAmount=debit.isChecked()?-n:n;Store.addTransaction(this,label,signedAmount,System.currentTimeMillis(),tagName);showMain();}).show();
+        new MaterialAlertDialogBuilder(this).setTitle("Add transaction").setView(box).setNegativeButton("Cancel",null).setPositiveButton("Add",(d,w)->{Double n=number(amount.getText().toString());String label=desc.getText().toString().trim(),tagName=tag.getText().toString().trim();if(n==null||n<=0||label.isEmpty()){Toast.makeText(this,"Enter an amount and description",Toast.LENGTH_SHORT).show();return;}if(!tagName.isEmpty()&&!Store.hasTag(this,tagName))Store.saveTag(this,tagName,"ðŸ·ï¸");double signedAmount=debit.isChecked()?-n:n;Store.addTransaction(this,label,signedAmount,System.currentTimeMillis(),tagName);showMain();}).show();
     }
 
 
@@ -293,8 +293,8 @@ public class MainActivity extends Activity {
             String desc=item.optString("description","Transaction"),tag=item.optString("tag","");
             double amount=item.optDouble("amount",0);long time=item.optLong("time",0);
             h.description.setText(desc);
-            h.meta.setText((tag.isEmpty()?"":Store.tagIcon(MainActivity.this,tag)+"  "+tag+"   ·   ")+Store.date(time));
-            h.amount.setText((amount>=0?"+ ":"− ")+Store.money(Math.abs(amount)));h.amount.setTextColor(amount>=0?green:red);
+            h.meta.setText((tag.isEmpty()?"":Store.tagIcon(MainActivity.this,tag)+"  "+tag+"   Â·   ")+Store.date(time));
+            h.amount.setText((amount>=0?"+ ":"âˆ’ ")+Store.money(Math.abs(amount)));h.amount.setTextColor(amount>=0?green:red);
             h.item.setForeground(getDrawable(android.R.drawable.list_selector_background));
             h.item.setOnClickListener(v->{if("Starting balance".equalsIgnoreCase(item.optString("description","")))showOpeningBalanceDialog();else showTransactionEditor(index,item);});
         }
@@ -329,8 +329,8 @@ public class MainActivity extends Activity {
         LinearLayout form=column();pad(form,0,4,0,8);content.addView(form);
         TextView hint=text("Automatically add this amount to your balance every day.",14,muted);form.addView(hint);
         EditText amount=field("Amount in PKR",true);amount.setText(Store.dailyEnabled(this)?String.valueOf(Store.dailyAmount(this)):"");LinearLayout.LayoutParams am=new LinearLayout.LayoutParams(-1,-2);am.topMargin=dp(24);form.addView(amount,am);
-        selectedHour=Store.dailyHour(this);selectedMinute=Store.dailyMinute(this);Button time=button("◷   Time: "+String.format(Locale.US,"%02d:%02d",selectedHour,selectedMinute));LinearLayout.LayoutParams tm=new LinearLayout.LayoutParams(-1,-2);tm.topMargin=dp(14);form.addView(time,tm);
-        time.setOnClickListener(v->new TimePickerDialog(this,(view,h,m)->{selectedHour=h;selectedMinute=m;time.setText("◷   Time: "+String.format(Locale.US,"%02d:%02d",h,m));},selectedHour,selectedMinute,true).show());
+        selectedHour=Store.dailyHour(this);selectedMinute=Store.dailyMinute(this);Button time=button("â—·   Time: "+String.format(Locale.US,"%02d:%02d",selectedHour,selectedMinute));LinearLayout.LayoutParams tm=new LinearLayout.LayoutParams(-1,-2);tm.topMargin=dp(14);form.addView(time,tm);
+        time.setOnClickListener(v->new TimePickerDialog(this,(view,h,m)->{selectedHour=h;selectedMinute=m;time.setText("â—·   Time: "+String.format(Locale.US,"%02d:%02d",h,m));},selectedHour,selectedMinute,true).show());
         Button save=button("Save daily income");LinearLayout.LayoutParams sm=new LinearLayout.LayoutParams(-1,-2);sm.topMargin=dp(18);form.addView(save,sm);
         TextView note=text("Daily credits are recorded as transactions. If Android delays an alarm, Batwa catches up when you next open the app.",12,muted);LinearLayout.LayoutParams np=new LinearLayout.LayoutParams(-1,-2);np.topMargin=dp(16);form.addView(note,np);
         save.setOnClickListener(v->{Double n=number(amount.getText().toString());if(n==null||n<=0){amount.setError("Enter a positive amount");return;}Store.saveDaily(this,n,selectedHour,selectedMinute);if(Build.VERSION.SDK_INT>=31&&!getSystemService(android.app.AlarmManager.class).canScheduleExactAlarms()){Intent intent=new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,Uri.parse("package:"+getPackageName()));startActivity(intent);Toast.makeText(this,"Allow alarms, then return to Batwa",Toast.LENGTH_LONG).show();}else Alarm.schedule(this);Toast.makeText(this,"Daily income saved",Toast.LENGTH_SHORT).show();showDaily();});
@@ -338,28 +338,171 @@ public class MainActivity extends Activity {
     }
     private void showSpending(){
         pageBase("spending","Spending by tag");
-        TextView range=text("DATE RANGE",10,muted);LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,-2);rp.topMargin=dp(12);root.addView(range,rp);
-        LinearLayout dates=row();Button from=button("From: "+shortDate(rangeStart)),to=button("To: "+shortDate(rangeEnd));LinearLayout.LayoutParams fromParams=new LinearLayout.LayoutParams(0,-2,1);
+
+        TextView range=text("DATE RANGE",10,muted);
+        LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,-2);
+        rp.topMargin=dp(12);
+        root.addView(range,rp);
+
+        LinearLayout dates=row();
+        Button from=button("From: "+shortDate(rangeStart));
+        Button to=button("To: "+shortDate(rangeEnd));
+
+        LinearLayout.LayoutParams fromParams=new LinearLayout.LayoutParams(0,-2,1);
         fromParams.rightMargin=dp(6);
         LinearLayout.LayoutParams toParams=new LinearLayout.LayoutParams(0,-2,1);
         toParams.leftMargin=dp(6);
-        dates.addView(from,fromParams);dates.addView(to,toParams);root.addView(dates);
-        from.setOnClickListener(v->pickDate(true,from,to));to.setOnClickListener(v->pickDate(false,from,to));
-        ScrollView scroll=new ScrollView(this);LinearLayout.LayoutParams scp=new LinearLayout.LayoutParams(-1,0,1);scp.topMargin=dp(12);root.addView(scroll,scp);LinearLayout list=column();scroll.addView(list);
-        java.util.LinkedHashMap<String,Double> totals=new java.util.LinkedHashMap<>();JSONArray tx=Store.transactions(this);
-        for(int i=0;i<tx.length();i++)try{JSONObject o=tx.getJSONObject(i);double a=o.optDouble("amount",0);long t=o.optLong("time",0);if(a>=0||t<rangeStart||t>rangeEnd)continue;String tag=o.optString("tag","").trim();if(tag.isEmpty())tag="Untagged";totals.put(tag,totals.containsKey(tag)?totals.get(tag)+Math.abs(a):Math.abs(a));}catch(Exception ignored){}
-        java.util.List<java.util.Map.Entry<String,Double>> sorted=new java.util.ArrayList<>(totals.entrySet());sorted.sort((a,b)->Double.compare(b.getValue(),a.getValue()));
-        if(sorted.isEmpty()){TextView empty=text("No expenses in this date range",14,muted);pad(empty,0,24,0,24);list.addView(empty);}else for(java.util.Map.Entry<String,Double> e:sorted){String name=e.getKey();LinearLayout item=row();pad(item,0,14,0,14);TextView icon=text(name.equals("Untagged")?"▫️":Store.tagIcon(this,name),22,ink);item.addView(icon);TextView title=text(name,15,ink);title.setTypeface(null,1);LinearLayout.LayoutParams tlp=new LinearLayout.LayoutParams(0,-2,1);tlp.leftMargin=dp(12);item.addView(title,tlp);TextView value=text(Store.money(e.getValue()),14,red);value.setTypeface(null,1);item.addView(value);list.addView(item);View divider=new View(this);divider.setBackgroundColor(line);list.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));}
-        addNav();setContentView(root);
+
+        dates.addView(from,fromParams);
+        dates.addView(to,toParams);
+        root.addView(dates);
+
+        from.setOnClickListener(v->pickDate(true,from,to));
+        to.setOnClickListener(v->pickDate(false,from,to));
+
+        java.util.LinkedHashMap<String,Double> totals=new java.util.LinkedHashMap<>();
+        JSONArray tx=Store.transactions(this);
+        double grandTotal=0;
+
+        for(int i=0;i<tx.length();i++){
+            try{
+                JSONObject o=tx.getJSONObject(i);
+                double a=o.optDouble("amount",0);
+                long t=o.optLong("time",0);
+
+                if(a>=0||t<rangeStart||t>rangeEnd)continue;
+
+                String tag=o.optString("tag","").trim();
+                if(tag.isEmpty())tag="Untagged";
+
+                double expense=Math.abs(a);
+                totals.put(tag,totals.containsKey(tag)?totals.get(tag)+expense:expense);
+                grandTotal+=expense;
+            }catch(Exception ignored){}
+        }
+
+        TextView total=text("TOTAL SPENDING    "+Store.money(grandTotal),17,red);
+        total.setTypeface(null,1);
+        LinearLayout.LayoutParams totalParams=new LinearLayout.LayoutParams(-1,-2);
+        totalParams.topMargin=dp(18);
+        totalParams.bottomMargin=dp(8);
+        root.addView(total,totalParams);
+
+        ScrollView scroll=new ScrollView(this);
+        LinearLayout.LayoutParams scp=new LinearLayout.LayoutParams(-1,0,1);
+        scp.topMargin=dp(8);
+        root.addView(scroll,scp);
+
+        LinearLayout list=column();
+        scroll.addView(list);
+
+        java.util.List<java.util.Map.Entry<String,Double>> sorted=
+            new java.util.ArrayList<>(totals.entrySet());
+
+        sorted.sort((a,b)->Double.compare(b.getValue(),a.getValue()));
+
+        if(sorted.isEmpty()){
+            TextView empty=text("No expenses in this date range",14,muted);
+            pad(empty,0,24,0,24);
+            list.addView(empty);
+        }else{
+            for(java.util.Map.Entry<String,Double> e:sorted){
+                String name=e.getKey();
+
+                LinearLayout item=row();
+                pad(item,0,14,0,14);
+
+                TextView icon=text(
+                    name.equals("Untagged")?"▪":Store.tagIcon(this,name),22,ink
+                );
+                item.addView(icon);
+
+                TextView title=text(name,15,ink);
+                title.setTypeface(null,1);
+
+                LinearLayout.LayoutParams tlp=new LinearLayout.LayoutParams(0,-2,1);
+                tlp.leftMargin=dp(12);
+                item.addView(title,tlp);
+
+                TextView value=text(Store.money(e.getValue()),14,red);
+                value.setTypeface(null,1);
+                item.addView(value);
+
+                item.setClickable(true);
+                item.setForeground(getDrawable(android.R.drawable.list_selector_background));
+
+                item.setOnClickListener(v->{
+                    LinearLayout details=column();
+                    pad(details,16,8,16,8);
+
+                    ScrollView detailScroll=new ScrollView(this);
+                    detailScroll.addView(details);
+
+                    int count=0;
+
+                    for(int j=0;j<tx.length();j++){
+                        JSONObject transaction=tx.optJSONObject(j);
+                        if(transaction==null)continue;
+
+                        double amount=transaction.optDouble("amount",0);
+                        long time=transaction.optLong("time",0);
+
+                        if(amount>=0||time<rangeStart||time>rangeEnd)continue;
+
+                        String transactionTag=transaction.optString("tag","").trim();
+                        if(transactionTag.isEmpty())transactionTag="Untagged";
+
+                        if(!name.equals(transactionTag))continue;
+
+                        String description=transaction.optString("description","Expense");
+
+                        TextView desc=text(description,15,ink);
+                        desc.setTypeface(null,1);
+                        details.addView(desc);
+
+                        TextView amountView=text(Store.money(Math.abs(amount)),14,red);
+                        details.addView(amountView);
+
+                        TextView dateView=text(Store.date(time),12,muted);
+                        details.addView(dateView);
+
+                        View separator=new View(this);
+                        separator.setBackgroundColor(line);
+                        LinearLayout.LayoutParams sepParams=
+                            new LinearLayout.LayoutParams(-1,dp(1));
+                        sepParams.topMargin=dp(10);
+                        sepParams.bottomMargin=dp(10);
+                        details.addView(separator,sepParams);
+
+                        count++;
+                    }
+
+                    new MaterialAlertDialogBuilder(this)
+                        .setTitle(name+" ("+count+")")
+                        .setView(detailScroll)
+                        .setPositiveButton("Close",null)
+                        .show();
+                });
+
+                list.addView(item);
+
+                View divider=new View(this);
+                divider.setBackgroundColor(line);
+                list.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));
+            }
+        }
+
+        addNav();
+        setContentView(root);
     }
     private void pickDate(boolean isStart,Button from,Button to){Calendar c=Calendar.getInstance();c.setTimeInMillis(isStart?rangeStart:rangeEnd);new DatePickerDialog(this,(view,y,m,d)->{Calendar chosen=Calendar.getInstance();chosen.set(y,m,d);if(isStart)startDay(chosen);else endDay(chosen);long val=chosen.getTimeInMillis();if(isStart){if(val>rangeEnd){Toast.makeText(this,"Start date must be on or before end date",Toast.LENGTH_SHORT).show();return;}rangeStart=val;from.setText("From: "+shortDate(val));}else{if(val<rangeStart){Toast.makeText(this,"End date must be on or after start date",Toast.LENGTH_SHORT).show();return;}rangeEnd=val;to.setText("To: "+shortDate(val));}showSpending();},c.get(Calendar.YEAR),c.get(Calendar.MONTH),c.get(Calendar.DAY_OF_MONTH)).show();}
     private void showTags(){
         pageBase("tags","Manage tags");syncIfSignedIn();Button add=button("+ Add tag");LinearLayout.LayoutParams ap=new LinearLayout.LayoutParams(-1,-2);ap.topMargin=dp(12);root.addView(add,ap);add.setOnClickListener(v->showTagEditor(null,null));
         ScrollView scroll=new ScrollView(this);LinearLayout.LayoutParams scp=new LinearLayout.LayoutParams(-1,0,1);scp.topMargin=dp(8);root.addView(scroll,scp);LinearLayout list=column();scroll.addView(list);JSONArray arr=Store.tags(this);
         if(arr.length()==0){TextView empty=text("No tags yet. Add a tag here or type one when adding an expense.",14,muted);pad(empty,0,20,0,20);list.addView(empty);}
-        for(int i=0;i<arr.length();i++){JSONObject o=arr.optJSONObject(i);if(o==null)continue;String name=o.optString("name"),icon=o.optString("icon","🏷️");LinearLayout item=row();pad(item,0,10,0,10);TextView ico=text(icon,22,ink);item.addView(ico);TextView nm=text(name,15,ink);nm.setTypeface(null,1);LinearLayout.LayoutParams nmp=new LinearLayout.LayoutParams(0,-2,1);nmp.leftMargin=dp(12);item.addView(nm,nmp);Button edit=button("✎");edit.setTextSize(18);edit.setContentDescription("Edit "+name);
+        for(int i=0;i<arr.length();i++){JSONObject o=arr.optJSONObject(i);if(o==null)continue;String name=o.optString("name"),icon=o.optString("icon","ðŸ·ï¸");LinearLayout item=row();pad(item,0,10,0,10);TextView ico=text(icon,22,ink);item.addView(ico);TextView nm=text(name,15,ink);nm.setTypeface(null,1);LinearLayout.LayoutParams nmp=new LinearLayout.LayoutParams(0,-2,1);nmp.leftMargin=dp(12);item.addView(nm,nmp);Button edit=button("âœŽ");edit.setTextSize(18);edit.setContentDescription("Edit "+name);
             LinearLayout.LayoutParams editParams=new LinearLayout.LayoutParams(dp(42),dp(40));editParams.leftMargin=dp(6);item.addView(edit,editParams);
-            Button del=button("🗑");del.setTextSize(16);del.setContentDescription("Delete "+name);del.setTextColor(red);
+            Button del=button("ðŸ—‘");del.setTextSize(16);del.setContentDescription("Delete "+name);del.setTextColor(red);
             LinearLayout.LayoutParams deleteParams=new LinearLayout.LayoutParams(dp(42),dp(40));deleteParams.leftMargin=dp(6);item.addView(del,deleteParams);edit.setOnClickListener(v->showTagEditor(name,icon));del.setOnClickListener(v->new MaterialAlertDialogBuilder(this).setTitle("Delete tag?").setMessage("Transactions using this tag will remain, but become untagged.").setNegativeButton("Cancel",null).setPositiveButton("Delete",(d,w)->{Store.deleteTag(this,name);showTags();}).show());list.addView(item);View divider=new View(this);divider.setBackgroundColor(line);list.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));}
         addNav();setContentView(root);
     }
@@ -395,7 +538,7 @@ public class MainActivity extends Activity {
                 String desc=description.getText().toString().trim(),tagName=tag.getText().toString().trim();
                 if(n==null||n==0){amount.setError("Enter a non-zero amount");return;}
                 if(desc.isEmpty()){description.setError("Enter a description");return;}
-                if(!tagName.isEmpty()&&!Store.hasTag(this,tagName))Store.saveTag(this,tagName,"🏷️");
+                if(!tagName.isEmpty()&&!Store.hasTag(this,tagName))Store.saveTag(this,tagName,"ðŸ·ï¸");
                 Store.updateTransaction(this,index,desc,n,timestamp.getTimeInMillis(),tagName);
                 dialog.dismiss();showMain();
             });
@@ -410,7 +553,7 @@ public class MainActivity extends Activity {
     }
 
     private void showTagEditor(String oldName,String oldIcon){
-        boolean editing=oldName!=null;LinearLayout box=column();pad(box,20,4,20,0);EditText name=field("Tag name",false);if(editing)name.setText(oldName);box.addView(name);final String[] icon={editing?oldIcon:"🏷️"};Button choose=button("Choose icon  "+icon[0]);box.addView(choose);choose.setOnClickListener(v->showIconPicker(icon,choose));
+        boolean editing=oldName!=null;LinearLayout box=column();pad(box,20,4,20,0);EditText name=field("Tag name",false);if(editing)name.setText(oldName);box.addView(name);final String[] icon={editing?oldIcon:"ðŸ·ï¸"};Button choose=button("Choose icon  "+icon[0]);box.addView(choose);choose.setOnClickListener(v->showIconPicker(icon,choose));
         AlertDialog dialog=new MaterialAlertDialogBuilder(this).setTitle(editing?"Update tag":"New tag").setView(box).setNegativeButton("Cancel",null).setPositiveButton(editing?"Save":"Add",null).create();dialog.setOnShowListener(x->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{String n=name.getText().toString().trim();if(n.isEmpty()){name.setError("Enter a tag name");return;}if(Store.hasTag(this,n)&&(!editing||!n.equalsIgnoreCase(oldName))){name.setError("This tag already exists");return;}if(editing)Store.renameTag(this,oldName,n,icon[0]);else Store.saveTag(this,n,icon[0]);dialog.dismiss();showTags();}));dialog.show();
     }
 
@@ -492,3 +635,5 @@ public class MainActivity extends Activity {
     @Override protected void onStop(){try{if(connectivityManager!=null)connectivityManager.unregisterNetworkCallback(networkCallback);}catch(Exception ignored){}super.onStop();}
     @Override protected void onResume(){super.onResume();if(Store.isSetup(this)){maybeCatchUp();syncIfSignedIn();if(root!=null){if(currentScreen.equals("daily"))showDaily();else if(currentScreen.equals("spending"))showSpending();else if(currentScreen.equals("tags"))showTags();else showMain();}}}
 }
+
+
