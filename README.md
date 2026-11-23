@@ -1,6 +1,6 @@
 # Batwa — lightweight Android expense tracker
 
-Native Android Java app. Offline-first; no login, analytics, or ads. Uses Google Material Components for Android UI.
+Native Android Java expense tracker. Offline-first with optional Google account sign-in and private Firestore sync. No analytics or ads. Uses Google Material Components for Android UI.
 
 ## Included
 - First-launch configurable opening balance; tap the balance card on Home to edit the opening amount later. Editing adjusts the current balance by the difference without changing later expenses or daily credits.
@@ -84,3 +84,39 @@ The icon picker now uses AndroidX RecyclerView with a 5-column grid. Only visibl
 - The Add transaction dialog now includes a Debit checkbox. It is checked by default, so ordinary expenses continue to subtract from the balance. Uncheck it to add a positive transaction (credit) to the balance.
 - Positive and negative transactions both retain the entered description and optional tag and appear in the transaction history.
 - Version name 1.7 / version code 7. Package ID and local storage remain unchanged for in-place updates.
+
+
+## Current development branch: Google sync and usability
+
+The `codex/firestore-sync` branch contains the next development batch. It keeps the existing application ID, signing expectations, SharedPreferences file and legacy JSON fields so it can be installed as an in-place update after validation.
+
+- Google account sign-in through Firebase Authentication.
+- Per-user Firestore storage under `users/{uid}/batwa`; one account cannot read another account's data.
+- Additive first-sync merge: local and cloud records are combined by stable IDs. Existing local records are not replaced by an empty cloud collection.
+- Stable IDs and update timestamps are added to existing transaction/tag records without changing their financial values.
+- Deletion tombstones are synced so records deleted on one device do not reappear from another.
+- Home transaction rows use RecyclerView. Current-month entries are shown first; older history is loaded in batches as the list is scrolled.
+- Home search matches transaction descriptions and tags.
+- Dark-mode toggle is available on Home.
+- Spending date controls and tag action controls have improved spacing; tag actions use edit/delete icons.
+- Transaction and tag deletion remain protected by confirmation dialogs.
+
+### Firebase setup for cloud sync
+
+The Firebase project and Android app configuration already exist. Before using sign-in/sync, confirm:
+
+1. In Firebase Console, open **Authentication → Sign-in method** and enable **Google**.
+2. Deploy the included Firestore rules. With Firebase CLI installed and authenticated, run:
+
+   ```sh
+   firebase deploy --only firestore:rules --project batwa-f920b
+   ```
+
+   Or publish the contents of `firestore.rules` in Firestore **Rules** in the Firebase Console.
+3. Keep the existing `google-services.json` associated with Firebase project `batwa-f920b`; do not replace it with a different project's configuration.
+
+Firestore records are stored under each authenticated user's UID. The first sync merges local records with that account's cloud records. Sign-out does not delete local data.
+
+### Build and validation status
+
+This is a development branch, not yet a release APK. The GitHub Actions workflow in `.github/workflows/android-build.yml` attempts a debug build on branch updates. Do not install a build until CI succeeds and the APK has been checked on the phone. Keep `versionCode` unchanged until the release build is ready; increment it for the eventual release.
