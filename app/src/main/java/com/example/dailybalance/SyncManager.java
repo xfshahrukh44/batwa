@@ -57,7 +57,7 @@ final class SyncManager {
 
             boolean firstSyncForAccount = !Store.hasCompletedSync(context, user.getUid());
             Store.mergeCloudData(context, transactions, tags, deletedTransactions, deletedTags, firstSyncForAccount);
-            return uploadLocal(context, root).addOnSuccessTask(SYNC_EXECUTOR, ignored -> {
+            return uploadLocal(context, root).onSuccessTask(SYNC_EXECUTOR, ignored -> {
                 Store.markSyncComplete(context, user.getUid());
                 return Tasks.forResult(null);
             });
