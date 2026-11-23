@@ -113,7 +113,7 @@ public class MainActivity extends Activity {
     private void initRange(){Calendar c=Calendar.getInstance();c.set(Calendar.DAY_OF_MONTH,1);startDay(c);rangeStart=c.getTimeInMillis();c=Calendar.getInstance();endDay(c);rangeEnd=c.getTimeInMillis();}
     private void startDay(Calendar c){c.set(Calendar.HOUR_OF_DAY,0);c.set(Calendar.MINUTE,0);c.set(Calendar.SECOND,0);c.set(Calendar.MILLISECOND,0);}
     private void endDay(Calendar c){c.set(Calendar.HOUR_OF_DAY,23);c.set(Calendar.MINUTE,59);c.set(Calendar.SECOND,59);c.set(Calendar.MILLISECOND,999);}
-    private String shortDate(long t){return new SimpleDateFormat("dd-MM-yy",Locale.US).format(new Date(t));}
+    private String shortDate(long t){return new SimpleDateFormat("dd-MMM-yy",Locale.US).format(new Date(t));}
 
     private void showOpeningSetup(){
         LinearLayout box=column();box.setGravity(Gravity.CENTER);safeInsets(box,28,24,24);box.setBackgroundColor(bg);
@@ -293,7 +293,7 @@ public class MainActivity extends Activity {
             String desc=item.optString("description","Transaction"),tag=item.optString("tag","");
             double amount=item.optDouble("amount",0);long time=item.optLong("time",0);
             h.description.setText(desc);
-            h.meta.setText((tag.isEmpty()?"":Store.tagIcon(MainActivity.this,tag)+"  "+tag+"   Â·   ")+Store.date(time));
+            h.meta.setText((tag.isEmpty()?"":Store.tagIcon(MainActivity.this,tag)+"  "+tag+"   |   ")+Store.date(time));
             h.amount.setText((amount>=0?"+ ":"- ")+Store.money(Math.abs(amount)));h.amount.setTextColor(amount>=0?green:red);
             h.item.setForeground(getDrawable(android.R.drawable.list_selector_background));
             h.item.setOnClickListener(v->{if("Starting balance".equalsIgnoreCase(item.optString("description","")))showOpeningBalanceDialog();else showTransactionEditor(index,item);});
