@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.res.ColorStateList;
 import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
@@ -158,19 +159,18 @@ public class MainActivity extends Activity {
         txHeading.addView(search);
         search.setOnClickListener(v->showTransactionSearch());
         root.addView(txHeading);
-        ScrollView scroll=new ScrollView(this);LinearLayout.LayoutParams scp=new LinearLayout.LayoutParams(-1,0,1);scp.topMargin=dp(5);root.addView(scroll,scp);LinearLayout list=column();scroll.addView(list);
         JSONArray arr=Store.transactions(this);
-        if(arr.length()==0){TextView empty=text("No transactions yet",14,muted);pad(empty,0,24,0,24);list.addView(empty);}
-        else if(!homeSearchQuery.isEmpty()&&countMatchingTransactions(arr,homeSearchQuery)==0){TextView empty=text("No matching transactions",14,muted);pad(empty,0,24,0,24);list.addView(empty);}
-        for(int i=0;i<arr.length();i++)try{JSONObject o=arr.getJSONObject(i);String desc=o.optString("description","Transaction"),tag=o.optString("tag","");double amt=o.optDouble("amount",0);long time=o.optLong("time",0);
-            if(!homeSearchQuery.isEmpty()&&!desc.toLowerCase(Locale.ROOT).contains(homeSearchQuery.toLowerCase(Locale.ROOT))&&!tag.toLowerCase(Locale.ROOT).contains(homeSearchQuery.toLowerCase(Locale.ROOT)))continue;
-            LinearLayout item=row();pad(item,0,11,0,11);LinearLayout details=column();TextView d=text(desc,15,ink);d.setTypeface(null,1);details.addView(d);String meta=(tag.isEmpty()?"":Store.tagIcon(this,tag)+"  "+tag+"   ·   ")+Store.date(time);TextView date=text(meta,11,muted);LinearLayout.LayoutParams dp2=new LinearLayout.LayoutParams(-2,-2);dp2.topMargin=dp(4);details.addView(date,dp2);item.addView(details,new LinearLayout.LayoutParams(0,-2,1));TextView value=text((amt>=0?"+ ":"− ")+Store.money(Math.abs(amt)),13,amt>=0?green:red);value.setTypeface(null,1);item.addView(value);
-            // Restore tap-to-edit interaction. Capture the current array index and transaction snapshot.
-            final int transactionIndex=i; final JSONObject transaction=o;
-            item.setClickable(true);item.setFocusable(true);item.setForeground(getDrawable(android.R.drawable.list_selector_background));
-            item.setOnClickListener(v->{if("Starting balance".equalsIgnoreCase(transaction.optString("description","")))showOpeningBalanceDialog();else showTransactionEditor(transactionIndex,transaction);});
-            list.addView(item);View divider=new View(this);divider.setBackgroundColor(line);list.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));
-        }catch(Exception ignored){}
+        RecyclerView transactionList=new RecyclerView(this);
+        transactionList.setLayoutManager(new LinearLayoutManager(this));
+        transactionList.setItemViewCacheSize(12);
+        LinearLayout.LayoutParams scp=new LinearLayout.LayoutParams(-1,0,1);scp.topMargin=dp(5);root.addView(transactionList,scp);
+        TransactionListAdapter transactionAdapter=new TransactionListAdapter(arr,homeSearchQuery);
+        transactionList.setAdapter(transactionAdapter);
+        transactionList.addOnScrollListener(new RecyclerView.OnScrollListener(){
+            @Override public void onScrolled(RecyclerView view,int dx,int dy){
+                if(dy>0&&!view.canScrollVertically(1))transactionAdapter.loadOlder();
+            }
+        });
         addNav();setContentView(root);
     }
     private void showOpeningBalanceDialog(){
@@ -228,6 +228,66 @@ public class MainActivity extends Activity {
             Toast.makeText(this,"Google sign-in cancelled or failed: "+e.getStatusCode(),Toast.LENGTH_LONG).show();
         }catch(Exception e){
             Toast.makeText(this,"Google sign-in failed: "+e.getMessage(),Toast.LENGTH_LONG).show();
+        }
+    }
+
+
+    /** RecyclerView-backed transaction history: current month first, then older batches of 50. */
+    private final class TransactionListAdapter extends RecyclerView.Adapter<TransactionListAdapter.Holder>{
+        private final JSONArray source;
+        private final String query;
+        private final java.util.List<Integer> visible=new java.util.ArrayList<>();
+        private int olderCursor;
+        private boolean hasMore;
+        private final long monthStart;
+        TransactionListAdapter(JSONArray source,String query){
+            this.source=source;this.query=query==null?"":query.trim().toLowerCase(Locale.ROOT);
+            Calendar month=Calendar.getInstance();month.set(Calendar.DAY_OF_MONTH,1);startDay(month);monthStart=month.getTimeInMillis();
+            olderCursor=source.length();hasMore=false;
+            for(int i=0;i<source.length();i++){
+                JSONObject item=source.optJSONObject(i);if(item==null)continue;
+                if(item.optLong("time",0)<monthStart){olderCursor=i;hasMore=true;break;}
+                if(matches(item))visible.add(i);
+            }
+            if(visible.isEmpty()&&hasMore)loadOlder();
+        }
+        private boolean matches(JSONObject item){
+            return query.isEmpty()||item.optString("description","").toLowerCase(Locale.ROOT).contains(query)
+                    ||item.optString("tag","").toLowerCase(Locale.ROOT).contains(query);
+        }
+        void loadOlder(){
+            if(!hasMore)return;
+            int added=0;
+            while(olderCursor<source.length()&&added<50){
+                int index=olderCursor++;JSONObject item=source.optJSONObject(index);
+                if(item!=null&&matches(item)){visible.add(index);added++;}
+            }
+            hasMore=olderCursor<source.length();
+            if(added>0)notifyItemRangeInserted(visible.size()-added,added);
+        }
+        @Override public Holder onCreateViewHolder(android.view.ViewGroup parent,int type){
+            LinearLayout container=column();LinearLayout item=row();pad(item,0,11,0,11);
+            LinearLayout details=column();TextView description=text("",15,ink);description.setTypeface(null,1);details.addView(description);
+            TextView meta=text("",11,muted);LinearLayout.LayoutParams mp=new LinearLayout.LayoutParams(-2,-2);mp.topMargin=dp(4);details.addView(meta,mp);
+            item.addView(details,new LinearLayout.LayoutParams(0,-2,1));
+            TextView amount=text("",13,green);amount.setTypeface(null,1);item.addView(amount);
+            container.addView(item);View divider=new View(MainActivity.this);divider.setBackgroundColor(line);container.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));
+            return new Holder(container,item,description,meta,amount);
+        }
+        @Override public void onBindViewHolder(Holder h,int position){
+            int index=visible.get(position);JSONObject item=source.optJSONObject(index);if(item==null)return;
+            String desc=item.optString("description","Transaction"),tag=item.optString("tag","");
+            double amount=item.optDouble("amount",0);long time=item.optLong("time",0);
+            h.description.setText(desc);
+            h.meta.setText((tag.isEmpty()?"":Store.tagIcon(MainActivity.this,tag)+"  "+tag+"   ·   ")+Store.date(time));
+            h.amount.setText((amount>=0?"+ ":"− ")+Store.money(Math.abs(amount)));h.amount.setTextColor(amount>=0?green:red);
+            h.item.setForeground(getDrawable(android.R.drawable.list_selector_background));
+            h.item.setOnClickListener(v->{if("Starting balance".equalsIgnoreCase(item.optString("description","")))showOpeningBalanceDialog();else showTransactionEditor(index,item);});
+        }
+        @Override public int getItemCount(){return visible.size();}
+        final class Holder extends RecyclerView.ViewHolder{
+            final LinearLayout item;final TextView description,meta,amount;
+            Holder(LinearLayout container,LinearLayout item,TextView description,TextView meta,TextView amount){super(container);this.item=item;this.description=description;this.meta=meta;this.amount=amount;}
         }
     }
 
