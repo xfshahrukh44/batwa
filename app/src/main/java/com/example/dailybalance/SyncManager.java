@@ -55,8 +55,12 @@ final class SyncManager {
             JSONArray deletedTransactions = snapshots((com.google.firebase.firestore.QuerySnapshot) results.get(2));
             JSONArray deletedTags = snapshots((com.google.firebase.firestore.QuerySnapshot) results.get(3));
 
-            Store.mergeCloudData(context, transactions, tags, deletedTransactions, deletedTags);
-            return uploadLocal(context, root);
+            boolean firstSyncForAccount = !Store.hasCompletedSync(context, user.getUid());
+            Store.mergeCloudData(context, transactions, tags, deletedTransactions, deletedTags, firstSyncForAccount);
+            return uploadLocal(context, root).addOnSuccessTask(SYNC_EXECUTOR, ignored -> {
+                Store.markSyncComplete(context, user.getUid());
+                return Tasks.forResult(null);
+            });
         }).addOnCompleteListener(task -> {
             synchronized (SyncManager.class) { syncing = false; }
         });
