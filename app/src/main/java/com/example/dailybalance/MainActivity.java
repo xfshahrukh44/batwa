@@ -338,174 +338,119 @@ public class MainActivity extends Activity {
     }
     private void showSpending(){
         pageBase("spending","Spending by tag");
-
         TextView range=text("DATE RANGE",10,muted);
-        LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,-2);
-        rp.topMargin=dp(12);
-        root.addView(range,rp);
-
+        LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,-2);rp.topMargin=dp(12);root.addView(range,rp);
         LinearLayout dates=row();
-        Button from=button("From: "+shortDate(rangeStart));
-        Button to=button("To: "+shortDate(rangeEnd));
-
-        LinearLayout.LayoutParams fromParams=new LinearLayout.LayoutParams(0,-2,1);
-        fromParams.rightMargin=dp(6);
-        LinearLayout.LayoutParams toParams=new LinearLayout.LayoutParams(0,-2,1);
-        toParams.leftMargin=dp(6);
-
-        dates.addView(from,fromParams);
-        dates.addView(to,toParams);
-        root.addView(dates);
-
-        from.setOnClickListener(v->pickDate(true,from,to));
-        to.setOnClickListener(v->pickDate(false,from,to));
-
-        java.util.LinkedHashMap<String,Double> totals=new java.util.LinkedHashMap<>();
-        JSONArray tx=Store.transactions(this);
-        double grandTotal=0;
-
-        for(int i=0;i<tx.length();i++){
-            try{
-                JSONObject o=tx.getJSONObject(i);
-                double a=o.optDouble("amount",0);
-                long t=o.optLong("time",0);
-
-                if(a>=0||t<rangeStart||t>rangeEnd)continue;
-
-                String tag=o.optString("tag","").trim();
-                if(tag.isEmpty())tag="Untagged";
-
-                double expense=Math.abs(a);
-                totals.put(tag,totals.containsKey(tag)?totals.get(tag)+expense:expense);
-                grandTotal+=expense;
-            }catch(Exception ignored){}
-        }
-
-        TextView total=text("TOTAL SPENDING    "+Store.money(grandTotal),17,red);
-        total.setTypeface(null,1);
-        LinearLayout.LayoutParams totalParams=new LinearLayout.LayoutParams(-1,-2);
-        totalParams.topMargin=dp(18);
-        totalParams.bottomMargin=dp(8);
-        root.addView(total,totalParams);
+        Button from=button("From: "+shortDate(rangeStart)),to=button("To: "+shortDate(rangeEnd));
+        LinearLayout.LayoutParams fromParams=new LinearLayout.LayoutParams(0,-2,1);fromParams.rightMargin=dp(6);
+        LinearLayout.LayoutParams toParams=new LinearLayout.LayoutParams(0,-2,1);toParams.leftMargin=dp(6);
+        dates.addView(from,fromParams);dates.addView(to,toParams);root.addView(dates);
+        from.setOnClickListener(v->pickDate(true,from,to));to.setOnClickListener(v->pickDate(false,from,to));
 
         ScrollView scroll=new ScrollView(this);
-        LinearLayout.LayoutParams scp=new LinearLayout.LayoutParams(-1,0,1);
-        scp.topMargin=dp(8);
-        root.addView(scroll,scp);
+        LinearLayout.LayoutParams scp=new LinearLayout.LayoutParams(-1,0,1);scp.topMargin=dp(12);root.addView(scroll,scp);
+        LinearLayout list=column();scroll.addView(list);
+        java.util.LinkedHashMap<String,Double> totals=new java.util.LinkedHashMap<>();
+        JSONArray tx=Store.transactions(this);double grandTotal=0;
+        for(int i=0;i<tx.length();i++)try{
+            JSONObject o=tx.getJSONObject(i);double amount=o.optDouble("amount",0);long time=o.optLong("time",0);
+            if(amount>=0||time<rangeStart||time>rangeEnd)continue;
+            String tag=o.optString("tag","").trim();if(tag.isEmpty())tag="Untagged";
+            double expense=Math.abs(amount);grandTotal+=expense;
+            totals.put(tag,totals.containsKey(tag)?totals.get(tag)+expense:expense);
+        }catch(Exception ignored){}
 
-        LinearLayout list=column();
-        scroll.addView(list);
+        MaterialCardView totalCard=card();totalCard.setCardBackgroundColor(paleGreen);
+        LinearLayout totalContent=column();pad(totalContent,16,12,16,12);
+        TextView totalLabel=text("TOTAL EXPENSES",11,muted);
+        TextView totalValue=text(Store.money(grandTotal),22,green);totalValue.setTypeface(null,1);
+        totalContent.addView(totalLabel);totalContent.addView(totalValue);totalCard.addView(totalContent);
+        LinearLayout.LayoutParams totalParams=new LinearLayout.LayoutParams(-1,-2);totalParams.bottomMargin=dp(12);list.addView(totalCard,totalParams);
 
-        java.util.List<java.util.Map.Entry<String,Double>> sorted=
-            new java.util.ArrayList<>(totals.entrySet());
-
+        java.util.List<java.util.Map.Entry<String,Double>> sorted=new java.util.ArrayList<>(totals.entrySet());
         sorted.sort((a,b)->Double.compare(b.getValue(),a.getValue()));
-
         if(sorted.isEmpty()){
-            TextView empty=text("No expenses in this date range",14,muted);
-            pad(empty,0,24,0,24);
-            list.addView(empty);
-        }else{
-            for(java.util.Map.Entry<String,Double> e:sorted){
-                String name=e.getKey();
-
-                LinearLayout item=row();
-                pad(item,0,14,0,14);
-
-                TextView icon=text(
-                    name.equals("Untagged")?"▪":Store.tagIcon(this,name),22,ink
-                );
-                item.addView(icon);
-
-                TextView title=text(name,15,ink);
-                title.setTypeface(null,1);
-
-                LinearLayout.LayoutParams tlp=new LinearLayout.LayoutParams(0,-2,1);
-                tlp.leftMargin=dp(12);
-                item.addView(title,tlp);
-
-                TextView value=text(Store.money(e.getValue()),14,red);
-                value.setTypeface(null,1);
-                item.addView(value);
-
-                item.setClickable(true);
-                item.setForeground(getDrawable(android.R.drawable.list_selector_background));
-
-                item.setOnClickListener(v->{
-                    LinearLayout details=column();
-                    pad(details,16,8,16,8);
-
-                    ScrollView detailScroll=new ScrollView(this);
-                    detailScroll.addView(details);
-
-                    int count=0;
-
-                    for(int j=0;j<tx.length();j++){
-                        JSONObject transaction=tx.optJSONObject(j);
-                        if(transaction==null)continue;
-
-                        double amount=transaction.optDouble("amount",0);
-                        long time=transaction.optLong("time",0);
-
-                        if(amount>=0||time<rangeStart||time>rangeEnd)continue;
-
-                        String transactionTag=transaction.optString("tag","").trim();
-                        if(transactionTag.isEmpty())transactionTag="Untagged";
-
-                        if(!name.equals(transactionTag))continue;
-
-                        String description=transaction.optString("description","Expense");
-
-                        TextView desc=text(description,15,ink);
-                        desc.setTypeface(null,1);
-                        details.addView(desc);
-
-                        TextView amountView=text(Store.money(Math.abs(amount)),14,red);
-                        details.addView(amountView);
-
-                        TextView dateView=text(Store.date(time),12,muted);
-                        details.addView(dateView);
-
-                        View separator=new View(this);
-                        separator.setBackgroundColor(line);
-                        LinearLayout.LayoutParams sepParams=
-                            new LinearLayout.LayoutParams(-1,dp(1));
-                        sepParams.topMargin=dp(10);
-                        sepParams.bottomMargin=dp(10);
-                        details.addView(separator,sepParams);
-
-                        count++;
-                    }
-
-                    new MaterialAlertDialogBuilder(this)
-                        .setTitle(name+" ("+count+")")
-                        .setView(detailScroll)
-                        .setPositiveButton("Close",null)
-                        .show();
-                });
-
-                list.addView(item);
-
-                View divider=new View(this);
-                divider.setBackgroundColor(line);
-                list.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));
-            }
+            TextView empty=text("No expenses in this date range",14,muted);pad(empty,0,24,0,24);list.addView(empty);
+        }else for(java.util.Map.Entry<String,Double> entry:sorted){
+            String name=entry.getKey();LinearLayout item=row();pad(item,0,14,0,14);
+            TextView icon=text(name.equals("Untagged")?"▫️":Store.tagIcon(this,name),22,ink);item.addView(icon);
+            TextView title=text(name,15,ink);title.setTypeface(null,1);
+            LinearLayout.LayoutParams tlp=new LinearLayout.LayoutParams(0,-2,1);tlp.leftMargin=dp(12);item.addView(title,tlp);
+            TextView value=text(Store.money(entry.getValue()),14,red);value.setTypeface(null,1);item.addView(value);
+            item.setClickable(true);item.setFocusable(true);item.setForeground(getDrawable(android.R.drawable.list_selector_background));
+            item.setOnClickListener(v->showTagTransactions(name));
+            list.addView(item);
+            View divider=new View(this);divider.setBackgroundColor(line);list.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));
         }
-
-        addNav();
-        setContentView(root);
-    }
-    private void pickDate(boolean isStart,Button from,Button to){Calendar c=Calendar.getInstance();c.setTimeInMillis(isStart?rangeStart:rangeEnd);new DatePickerDialog(this,(view,y,m,d)->{Calendar chosen=Calendar.getInstance();chosen.set(y,m,d);if(isStart)startDay(chosen);else endDay(chosen);long val=chosen.getTimeInMillis();if(isStart){if(val>rangeEnd){Toast.makeText(this,"Start date must be on or before end date",Toast.LENGTH_SHORT).show();return;}rangeStart=val;from.setText("From: "+shortDate(val));}else{if(val<rangeStart){Toast.makeText(this,"End date must be on or after start date",Toast.LENGTH_SHORT).show();return;}rangeEnd=val;to.setText("To: "+shortDate(val));}showSpending();},c.get(Calendar.YEAR),c.get(Calendar.MONTH),c.get(Calendar.DAY_OF_MONTH)).show();}
-    private void showTags(){
-        pageBase("tags","Manage tags");syncIfSignedIn();Button add=button("+ Add tag");LinearLayout.LayoutParams ap=new LinearLayout.LayoutParams(-1,-2);ap.topMargin=dp(12);root.addView(add,ap);add.setOnClickListener(v->showTagEditor(null,null));
-        ScrollView scroll=new ScrollView(this);LinearLayout.LayoutParams scp=new LinearLayout.LayoutParams(-1,0,1);scp.topMargin=dp(8);root.addView(scroll,scp);LinearLayout list=column();scroll.addView(list);JSONArray arr=Store.tags(this);
-        if(arr.length()==0){TextView empty=text("No tags yet. Add a tag here or type one when adding an expense.",14,muted);pad(empty,0,20,0,20);list.addView(empty);}
-        for(int i=0;i<arr.length();i++){JSONObject o=arr.optJSONObject(i);if(o==null)continue;String name=o.optString("name"),icon=o.optString("icon","ðŸ·ï¸");LinearLayout item=row();pad(item,0,10,0,10);TextView ico=text(icon,22,ink);item.addView(ico);TextView nm=text(name,15,ink);nm.setTypeface(null,1);LinearLayout.LayoutParams nmp=new LinearLayout.LayoutParams(0,-2,1);nmp.leftMargin=dp(12);item.addView(nm,nmp);Button edit=button("âœŽ");edit.setTextSize(18);edit.setContentDescription("Edit "+name);
-            LinearLayout.LayoutParams editParams=new LinearLayout.LayoutParams(dp(42),dp(40));editParams.leftMargin=dp(6);item.addView(edit,editParams);
-            Button del=button("ðŸ—‘");del.setTextSize(16);del.setContentDescription("Delete "+name);del.setTextColor(red);
-            LinearLayout.LayoutParams deleteParams=new LinearLayout.LayoutParams(dp(42),dp(40));deleteParams.leftMargin=dp(6);item.addView(del,deleteParams);edit.setOnClickListener(v->showTagEditor(name,icon));del.setOnClickListener(v->new MaterialAlertDialogBuilder(this).setTitle("Delete tag?").setMessage("Transactions using this tag will remain, but become untagged.").setNegativeButton("Cancel",null).setPositiveButton("Delete",(d,w)->{Store.deleteTag(this,name);showTags();}).show());list.addView(item);View divider=new View(this);divider.setBackgroundColor(line);list.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));}
         addNav();setContentView(root);
     }
+
+    private void showTagTransactions(String tagName){
+        LinearLayout content=column();pad(content,20,4,20,4);
+        ScrollView scroll=new ScrollView(this);scroll.addView(content);
+        JSONArray transactions=Store.transactions(this);double total=0;int count=0;
+        for(int i=0;i<transactions.length();i++){
+            JSONObject transaction=transactions.optJSONObject(i);if(transaction==null)continue;
+            double amount=transaction.optDouble("amount",0);long time=transaction.optLong("time",0);
+            String tag=transaction.optString("tag","").trim();if(tag.isEmpty())tag="Untagged";
+            if(amount>=0||time<rangeStart||time>rangeEnd||!tag.equalsIgnoreCase(tagName))continue;
+            total+=Math.abs(amount);count++;
+            LinearLayout row=column();pad(row,0,10,0,10);
+            TextView description=text(transaction.optString("description","(No description)"),15,ink);description.setTypeface(null,1);
+            TextView amountText=text(Store.money(Math.abs(amount)),14,red);amountText.setTypeface(null,1);
+            TextView dateText=text(Store.date(time),12,muted);
+            row.addView(description);row.addView(amountText);row.addView(dateText);content.addView(row);
+            View divider=new View(this);divider.setBackgroundColor(line);content.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));
+        }
+        if(count==0){TextView empty=text("No transactions for this tag in the selected date range.",14,muted);pad(empty,0,16,0,16);content.addView(empty);}
+        new MaterialAlertDialogBuilder(this).setTitle(tagName+" · "+count+" transactions")
+                .setMessage("Date range: "+shortDate(rangeStart)+" – "+shortDate(rangeEnd)+"\nTotal: "+Store.money(total))
+                .setView(scroll).setPositiveButton("Close",null).show();
+    }
+
+    private void pickDate(boolean isStart,Button from,Button to){
+        Calendar c=Calendar.getInstance();c.setTimeInMillis(isStart?rangeStart:rangeEnd);
+        new DatePickerDialog(this,(view,y,m,d)->{
+            Calendar chosen=Calendar.getInstance();chosen.set(y,m,d);if(isStart)startDay(chosen);else endDay(chosen);
+            long value=chosen.getTimeInMillis();
+            if(isStart){if(value>rangeEnd){Toast.makeText(this,"Start date must be on or before end date",Toast.LENGTH_SHORT).show();return;}rangeStart=value;from.setText("From: "+shortDate(value));}
+            else{if(value<rangeStart){Toast.makeText(this,"End date must be on or after start date",Toast.LENGTH_SHORT).show();return;}rangeEnd=value;to.setText("To: "+shortDate(value));}
+            showSpending();
+        },c.get(Calendar.YEAR),c.get(Calendar.MONTH),c.get(Calendar.DAY_OF_MONTH)).show();
+    }
+
+    private void showTags(){
+        pageBase("tags","Manage tags");syncIfSignedIn();
+        Button add=button("+ Add tag");LinearLayout.LayoutParams ap=new LinearLayout.LayoutParams(-1,-2);ap.topMargin=dp(12);
+        root.addView(add,ap);add.setOnClickListener(v->showTagEditor(null,null));
+        ScrollView scroll=new ScrollView(this);LinearLayout.LayoutParams scp=new LinearLayout.LayoutParams(-1,0,1);scp.topMargin=dp(8);
+        root.addView(scroll,scp);LinearLayout list=column();scroll.addView(list);JSONArray arr=Store.tags(this);
+        if(arr.length()==0){TextView empty=text("No tags yet. Add a tag here or type one when adding an expense.",14,muted);pad(empty,0,20,0,20);list.addView(empty);}
+        for(int i=0;i<arr.length();i++){
+            JSONObject o=arr.optJSONObject(i);if(o==null)continue;
+            String name=o.optString("name"),icon=o.optString("icon","🏷️");
+            LinearLayout item=row();pad(item,0,10,0,10);TextView ico=text(icon,22,ink);item.addView(ico);
+            TextView nm=text(name,15,ink);nm.setTypeface(null,1);
+            LinearLayout.LayoutParams nmp=new LinearLayout.LayoutParams(0,-2,1);nmp.leftMargin=dp(12);item.addView(nm,nmp);
+
+            MaterialButton edit=(MaterialButton)button("");
+            edit.setIconResource(android.R.drawable.ic_menu_edit);edit.setIconTint(ColorStateList.valueOf(ink));edit.setIconSize(dp(20));
+            edit.setContentDescription("Edit "+name);
+            LinearLayout.LayoutParams editParams=new LinearLayout.LayoutParams(dp(42),dp(40));editParams.leftMargin=dp(6);item.addView(edit,editParams);
+
+            MaterialButton del=(MaterialButton)button("");
+            del.setIconResource(android.R.drawable.ic_menu_delete);del.setIconTint(ColorStateList.valueOf(red));del.setIconSize(dp(20));
+            del.setContentDescription("Delete "+name);
+            LinearLayout.LayoutParams deleteParams=new LinearLayout.LayoutParams(dp(42),dp(40));deleteParams.leftMargin=dp(6);item.addView(del,deleteParams);
+            edit.setOnClickListener(v->showTagEditor(name,icon));
+            del.setOnClickListener(v->new MaterialAlertDialogBuilder(this).setTitle("Delete tag?")
+                    .setMessage("Transactions using this tag will remain, but become untagged.")
+                    .setNegativeButton("Cancel",null).setPositiveButton("Delete",(d,w)->{Store.deleteTag(this,name);showTags();}).show());
+            list.addView(item);View divider=new View(this);divider.setBackgroundColor(line);list.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));
+        }
+        addNav();setContentView(root);
+    }
+
     private void showTransactionEditor(int index, JSONObject transaction){
         LinearLayout box=column();pad(box,20,4,20,0);
         EditText amount=field("Signed amount: + income / - expense",true);
