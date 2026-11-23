@@ -261,7 +261,7 @@ public class Store {
     }
 
     static String money(double n) { return "PKR " + String.format(Locale.US, "%,.2f", n); }
-    static String date(long millis) { return new SimpleDateFormat("dd-MM-yy hh:mm a", Locale.US).format(new Date(millis)); }
+    static String date(long millis) { return new SimpleDateFormat("dd-MMM-yy hh:mm a", Locale.US).format(new Date(millis)); }
     static double dailyAmount(Context c) { return Double.longBitsToDouble(prefs(c).getLong("daily_amount", Double.doubleToLongBits(0))); }
     static int dailyHour(Context c) { return prefs(c).getInt("daily_hour", 0); }
     static int dailyMinute(Context c) { return prefs(c).getInt("daily_minute", 0); }
