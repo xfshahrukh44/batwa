@@ -61,9 +61,10 @@ final class SyncManager {
     private static JSONArray snapshots(com.google.firebase.firestore.QuerySnapshot snapshot) {
         JSONArray array = new JSONArray();
         for (DocumentSnapshot document : snapshot.getDocuments()) {
-            Map<String, Object> data = document.getData();
-            if (data == null) continue;
-            data.putIfAbsent("id", document.getId());
+            Map<String, Object> source = document.getData();
+            if (source == null) continue;
+            Map<String, Object> data = new HashMap<>(source);
+            if (!data.containsKey("id")) data.put("id", document.getId());
             array.put(new JSONObject(data));
         }
         return array;
