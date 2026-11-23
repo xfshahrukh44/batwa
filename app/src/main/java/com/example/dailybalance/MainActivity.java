@@ -265,7 +265,9 @@ public class MainActivity extends Activity {
             hasMore=olderCursor<source.length();
             if(added>0)notifyItemRangeInserted(visible.size()-added,added);
         }
+        @Override public int getItemViewType(int position){return visible.isEmpty()?1:0;}
         @Override public Holder onCreateViewHolder(android.view.ViewGroup parent,int type){
+            if(type==1){TextView empty=text(source.length()==0?"No transactions yet":"No matching transactions",14,muted);pad(empty,0,24,0,24);return new Holder(empty,null,null,null,null);}
             LinearLayout container=column();LinearLayout item=row();pad(item,0,11,0,11);
             LinearLayout details=column();TextView description=text("",15,ink);description.setTypeface(null,1);details.addView(description);
             TextView meta=text("",11,muted);LinearLayout.LayoutParams mp=new LinearLayout.LayoutParams(-2,-2);mp.topMargin=dp(4);details.addView(meta,mp);
@@ -275,6 +277,7 @@ public class MainActivity extends Activity {
             return new Holder(container,item,description,meta,amount);
         }
         @Override public void onBindViewHolder(Holder h,int position){
+            if(visible.isEmpty())return;
             int index=visible.get(position);JSONObject item=source.optJSONObject(index);if(item==null)return;
             String desc=item.optString("description","Transaction"),tag=item.optString("tag","");
             double amount=item.optDouble("amount",0);long time=item.optLong("time",0);
@@ -284,7 +287,7 @@ public class MainActivity extends Activity {
             h.item.setForeground(getDrawable(android.R.drawable.list_selector_background));
             h.item.setOnClickListener(v->{if("Starting balance".equalsIgnoreCase(item.optString("description","")))showOpeningBalanceDialog();else showTransactionEditor(index,item);});
         }
-        @Override public int getItemCount(){return visible.size();}
+        @Override public int getItemCount(){return visible.isEmpty()?1:visible.size();}
         final class Holder extends RecyclerView.ViewHolder{
             final LinearLayout item;final TextView description,meta,amount;
             Holder(LinearLayout container,LinearLayout item,TextView description,TextView meta,TextView amount){super(container);this.item=item;this.description=description;this.meta=meta;this.amount=amount;}
