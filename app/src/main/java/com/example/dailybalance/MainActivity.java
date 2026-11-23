@@ -173,6 +173,7 @@ public class MainActivity extends Activity {
                 if(dy>0&&!view.canScrollVertically(1))transactionAdapter.loadOlder();
             }
         });
+        transactionList.post(()->{if(!transactionList.canScrollVertically(1))transactionAdapter.loadOlder();});
         addNav();setContentView(root);
     }
     private void showOpeningBalanceDialog(){
