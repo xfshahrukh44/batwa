@@ -237,7 +237,9 @@ public class Store {
         JSONArray mergedTags=new JSONArray();for(JSONObject o:tagMap.values())if(!deletedTag.contains(o.optString("id","")))mergedTags.put(o);
         // Remove tag references for tags deleted on any device.
         for(int i=0;i<mergedTx.length();i++){JSONObject o=mergedTx.optJSONObject(i);if(o==null)continue;String tag=o.optString("tag","");for(int j=0;j<localTags.length();j++){JSONObject t=localTags.optJSONObject(j);if(t!=null&&deletedTag.contains(t.optString("id",""))&&t.optString("name","").equalsIgnoreCase(tag)){try{o.put("tag","");}catch(Exception ignored){}}}}
-        java.util.Collections.sort(localTransactionsAsList(mergedTx),(a,b)->Long.compare(b.optLong("time",0),a.optLong("time",0)));
+        java.util.List<JSONObject> sortedTransactions=localTransactionsAsList(mergedTx);
+        java.util.Collections.sort(sortedTransactions,(a,b)->Long.compare(b.optLong("time",0),a.optLong("time",0)));
+        mergedTx=new JSONArray();for(JSONObject item:sortedTransactions)mergedTx.put(item);
         prefs(c).edit().putString("transactions",mergedTx.toString()).putString("tags",mergedTags.toString())
                 .putString("deleted_transaction_ids",allDeletedTx.toString()).putString("deleted_tag_ids",allDeletedTags.toString())
                 .putLong("balance",Double.doubleToLongBits(balance(c)+(after-before))).apply();
