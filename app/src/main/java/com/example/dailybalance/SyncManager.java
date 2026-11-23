@@ -16,6 +16,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Best-effort offline-first sync. The first sync is additive: it unions local and cloud records
@@ -23,6 +25,7 @@ import java.util.Map;
  */
 final class SyncManager {
     private static boolean syncing;
+    private static final ExecutorService SYNC_EXECUTOR = Executors.newSingleThreadExecutor();
     private SyncManager() {}
 
     static synchronized boolean isSyncing() { return syncing; }
@@ -43,7 +46,7 @@ final class SyncManager {
                 root.document("deletedTransactions").collection("items").get(),
                 root.document("deletedTags").collection("items").get());
 
-        return reads.continueWithTask(task -> {
+        return reads.continueWithTask(SYNC_EXECUTOR, task -> {
             if (!task.isSuccessful()) throw task.getException() == null
                     ? new IllegalStateException("Could not read Batwa cloud data.") : task.getException();
             List<?> results = task.getResult();
