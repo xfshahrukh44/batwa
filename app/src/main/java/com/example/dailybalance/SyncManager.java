@@ -34,7 +34,7 @@ final class SyncManager {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) return Tasks.forException(new IllegalStateException("Sign in to sync Batwa."));
         synchronized (SyncManager.class) {
-            if (syncing) return Tasks.forResult(null);
+            if (syncing) return Tasks.<Void>forResult(null);
             syncing = true;
         }
 
