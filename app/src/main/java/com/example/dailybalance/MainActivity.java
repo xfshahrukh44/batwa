@@ -147,10 +147,10 @@ public class MainActivity extends Activity {
         currentScreen="home";root=column();root.setBackgroundColor(bg);safeInsets(root,20,14,8);
         LinearLayout top=row();top.setGravity(Gravity.CENTER_VERTICAL);
         FirebaseAuth auth=FirebaseAuth.getInstance();
-        String accountLabel=auth.getCurrentUser()==null?"Sign in":"\\u2601 "+(auth.getCurrentUser().getEmail()==null?"Account":auth.getCurrentUser().getEmail());
+        String accountLabel=auth.getCurrentUser()==null?"Sign in":"\u2601 "+(auth.getCurrentUser().getEmail()==null?"Account":auth.getCurrentUser().getEmail());
         Button account=button(accountLabel);account.setTextSize(11);top.addView(account,new LinearLayout.LayoutParams(0,dp(42),1));account.setOnClickListener(v->showAccountDialog());
         View topSpace=new View(this);top.addView(topSpace,new LinearLayout.LayoutParams(dp(6),1));
-        Button theme=button(darkMode?"\\u2600":"\\u263E");theme.setContentDescription("Toggle dark mode");theme.setMinWidth(dp(42));theme.setMinimumWidth(dp(42));top.addView(theme);theme.setOnClickListener(v->toggleDarkMode());
+        Button theme=button(darkMode?"\u2600":"\u263E");theme.setContentDescription("Toggle dark mode");theme.setMinWidth(dp(42));theme.setMinimumWidth(dp(42));top.addView(theme);theme.setOnClickListener(v->toggleDarkMode());
         View themeSpace=new View(this);top.addView(themeSpace,new LinearLayout.LayoutParams(dp(6),1));
         Button add=button("+  Add transaction");add.setTextColor(0xFFFFFFFF);top.addView(add);root.addView(top,new LinearLayout.LayoutParams(-1,-2));add.setOnClickListener(v->showExpenseDialog());
         syncIfSignedIn();
@@ -163,7 +163,7 @@ public class MainActivity extends Activity {
         LinearLayout txHeading=row();
         TextView txTitle=text("Transactions",18,ink);txTitle.setTypeface(null,1);
         txHeading.addView(txTitle,new LinearLayout.LayoutParams(0,-2,1));
-        Button search=button("\\u2315");
+        Button search=button("\u2315");
         search.setTextSize(22);search.setContentDescription("Search transactions");
         search.setMinWidth(dp(44));search.setMinimumWidth(dp(44));
         txHeading.addView(search);
@@ -433,18 +433,22 @@ public class MainActivity extends Activity {
             TextView nm=text(name,15,ink);nm.setTypeface(null,1);
             LinearLayout.LayoutParams nmp=new LinearLayout.LayoutParams(0,-2,1);nmp.leftMargin=dp(12);item.addView(nm,nmp);
 
-            Button edit=button("EDIT");
-            edit.setTextSize(11);
+            Button edit=button("Edit");
+            edit.setTextSize(10);
+            edit.setSingleLine(true);edit.setMaxLines(1);
+            edit.setMinWidth(0);edit.setMinimumWidth(0);edit.setPadding(dp(2),0,dp(2),0);
             edit.setContentDescription("Edit "+name);
-            LinearLayout.LayoutParams editParams=new LinearLayout.LayoutParams(dp(58),dp(40));
-            editParams.leftMargin=dp(6);item.addView(edit,editParams);
+            LinearLayout.LayoutParams editParams=new LinearLayout.LayoutParams(dp(48),dp(40));
+            editParams.leftMargin=dp(4);item.addView(edit,editParams);
 
-            Button del=button("DELETE");
-            del.setTextSize(11);
+            Button del=button("Delete");
+            del.setTextSize(10);
+            del.setSingleLine(true);del.setMaxLines(1);
+            del.setMinWidth(0);del.setMinimumWidth(0);del.setPadding(dp(2),0,dp(2),0);
             del.setTextColor(red);
             del.setContentDescription("Delete "+name);
-            LinearLayout.LayoutParams deleteParams=new LinearLayout.LayoutParams(dp(68),dp(40));
-            deleteParams.leftMargin=dp(6);item.addView(del,deleteParams);
+            LinearLayout.LayoutParams deleteParams=new LinearLayout.LayoutParams(dp(58),dp(40));
+            deleteParams.leftMargin=dp(4);item.addView(del,deleteParams);
             edit.setOnClickListener(v->showTagEditor(name,icon));
             del.setOnClickListener(v->new MaterialAlertDialogBuilder(this).setTitle("Delete tag?")
                     .setMessage("Transactions using this tag will remain, but become untagged.")
