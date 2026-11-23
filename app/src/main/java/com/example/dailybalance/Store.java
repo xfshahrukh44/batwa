@@ -63,13 +63,13 @@ public class Store {
             JSONObject o = old.optJSONObject(i);
             if (o == null) continue;
             if (!updated && "Starting balance".equalsIgnoreCase(o.optString("description", ""))) {
-                try { o.put("amount", opening); } catch (Exception ignored) {}
+                try { o.put("amount", opening); o.put("updatedAt", System.currentTimeMillis()); } catch (Exception ignored) {}
                 updated = true;
             }
             next.put(o);
         }
         if (!updated) {
-            try { JSONObject item = new JSONObject(); item.put("description", "Starting balance"); item.put("amount", opening); item.put("time", System.currentTimeMillis()); item.put("tag", ""); next.put(item); } catch (Exception ignored) {}
+            try { JSONObject item = new JSONObject(); item.put("id",UUID.randomUUID().toString()); item.put("createdAt",System.currentTimeMillis()); item.put("updatedAt",System.currentTimeMillis()); item.put("description", "Starting balance"); item.put("amount", opening); item.put("time", System.currentTimeMillis()); item.put("tag", ""); next.put(item); } catch (Exception ignored) {}
         }
         prefs(c).edit().putLong("opening_balance", Double.doubleToLongBits(opening))
                 .putLong("balance", Double.doubleToLongBits(adjustedBalance))
@@ -153,19 +153,19 @@ public class Store {
 
     static void renameTagInTransactions(Context c, String oldName, String newName) {
         JSONArray old=transactions(c), next=new JSONArray();
-        for(int i=0;i<old.length();i++) try { JSONObject o=old.getJSONObject(i); if(o.optString("tag","").equalsIgnoreCase(oldName)) o.put("tag",newName); next.put(o); } catch(Exception ignored){}
+        for(int i=0;i<old.length();i++) try { JSONObject o=old.getJSONObject(i); if(o.optString("tag","").equalsIgnoreCase(oldName)){o.put("tag",newName);o.put("updatedAt",System.currentTimeMillis());} next.put(o); } catch(Exception ignored){}
         prefs(c).edit().putString("transactions",next.toString()).apply();
     }
     static void renameTag(Context c, String oldName, String newName, String icon) {
         JSONArray a=tags(c); boolean found=false;
-        for(int i=0;i<a.length();i++){JSONObject o=a.optJSONObject(i);if(o!=null&&o.optString("name").equalsIgnoreCase(oldName)){try{o.put("name",newName);o.put("icon",icon);}catch(Exception ignored){}found=true;break;}}
+        for(int i=0;i<a.length();i++){JSONObject o=a.optJSONObject(i);if(o!=null&&o.optString("name").equalsIgnoreCase(oldName)){try{o.put("name",newName);o.put("icon",icon);o.put("updatedAt",System.currentTimeMillis());}catch(Exception ignored){}found=true;break;}}
         if(!found){try{JSONObject o=new JSONObject();o.put("name",newName);o.put("icon",icon);a.put(o);}catch(Exception ignored){}}
         prefs(c).edit().putString("tags",a.toString()).apply();
         renameTagInTransactions(c,oldName,newName);
     }
     static void clearTagFromTransactions(Context c, String name) {
         JSONArray old=transactions(c), next=new JSONArray();
-        for(int i=0;i<old.length();i++) try { JSONObject o=old.getJSONObject(i); if(o.optString("tag","").equalsIgnoreCase(name)) o.put("tag",""); next.put(o); } catch(Exception ignored){}
+        for(int i=0;i<old.length();i++) try { JSONObject o=old.getJSONObject(i); if(o.optString("tag","").equalsIgnoreCase(name)){o.put("tag","");o.put("updatedAt",System.currentTimeMillis());} next.put(o); } catch(Exception ignored){}
         prefs(c).edit().putString("transactions",next.toString()).apply();
     }
     static synchronized JSONArray tags(Context c) {
@@ -192,8 +192,8 @@ public class Store {
     static boolean hasTag(Context c,String name) { JSONArray a=tags(c); for(int i=0;i<a.length();i++){JSONObject o=a.optJSONObject(i); if(o!=null&&o.optString("name").equalsIgnoreCase(name.trim()))return true;} return false; }
     static void saveTag(Context c,String name,String icon) {
         name=name.trim(); JSONArray a=tags(c);
-        for(int i=0;i<a.length();i++){JSONObject o=a.optJSONObject(i); if(o!=null&&o.optString("name").equalsIgnoreCase(name)){try{o.put("icon",icon);}catch(Exception ignored){} prefs(c).edit().putString("tags",a.toString()).apply();return;}}
-        try {JSONObject o=new JSONObject();o.put("name",name);o.put("icon",icon);a.put(o);}catch(Exception ignored){}
+        for(int i=0;i<a.length();i++){JSONObject o=a.optJSONObject(i); if(o!=null&&o.optString("name").equalsIgnoreCase(name)){try{o.put("icon",icon);o.put("updatedAt",System.currentTimeMillis());}catch(Exception ignored){} prefs(c).edit().putString("tags",a.toString()).apply();return;}}
+        try {JSONObject o=new JSONObject();o.put("id",UUID.randomUUID().toString());o.put("updatedAt",System.currentTimeMillis());o.put("name",name);o.put("icon",icon);a.put(o);}catch(Exception ignored){}
         prefs(c).edit().putString("tags",a.toString()).apply();
     }
     static void deleteTag(Context c,String name) {
@@ -236,7 +236,7 @@ public class Store {
         for(int i=0;i<cloudTags.length();i++){JSONObject o=cloudTags.optJSONObject(i);if(o==null)continue;String id=o.optString("id","");if(id.isEmpty()||deletedTag.contains(id))continue;JSONObject old=tagMap.get(id);if(old==null||o.optLong("updatedAt",0)>old.optLong("updatedAt",0))tagMap.put(id,o);}
         JSONArray mergedTags=new JSONArray();for(JSONObject o:tagMap.values())if(!deletedTag.contains(o.optString("id","")))mergedTags.put(o);
         // Remove tag references for tags deleted on any device.
-        for(int i=0;i<mergedTx.length();i++){JSONObject o=mergedTx.optJSONObject(i);if(o==null)continue;String tag=o.optString("tag","");for(int j=0;j<localTags.length();j++){JSONObject t=localTags.optJSONObject(j);if(t!=null&&deletedTag.contains(t.optString("id",""))&&t.optString("name","").equalsIgnoreCase(tag)){try{o.put("tag","");}catch(Exception ignored){}}}}
+        for(int i=0;i<mergedTx.length();i++){JSONObject o=mergedTx.optJSONObject(i);if(o==null)continue;String tag=o.optString("tag","");for(int j=0;j<cloudDeletedTags.length();j++){JSONObject t=cloudDeletedTags.optJSONObject(j);if(t!=null&&t.optString("name","").equalsIgnoreCase(tag)){try{o.put("tag","");o.put("updatedAt",System.currentTimeMillis());}catch(Exception ignored){}}}}
         java.util.List<JSONObject> sortedTransactions=localTransactionsAsList(mergedTx);
         java.util.Collections.sort(sortedTransactions,(a,b)->Long.compare(b.optLong("time",0),a.optLong("time",0)));
         mergedTx=new JSONArray();for(JSONObject item:sortedTransactions)mergedTx.put(item);
