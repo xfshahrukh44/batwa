@@ -54,17 +54,31 @@ public class MainActivity extends Activity {
     private String homeSearchQuery = "";
     private GoogleSignInClient googleSignInClient;
     private static final int RC_GOOGLE_SIGN_IN = 9107;
-    private final int ink=0xFF18352B, muted=0xFF718078, green=0xFF26734D, bg=0xFFF4F8F4, red=0xFFBA4A45, line=0xFFE1EAE2, paleGreen=0xFFE4F2E7;
+    private int ink=0xFF18352B, muted=0xFF718078, green=0xFF26734D, bg=0xFFF4F8F4, red=0xFFBA4A45, line=0xFFE1EAE2, paleGreen=0xFFE4F2E7;
+    private boolean darkMode;
 
     @Override public void onCreate(Bundle b) {
         super.onCreate(b);
+        applyThemeColors();
         GoogleSignInOptions signInOptions = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestEmail().requestIdToken(getString(R.string.default_web_client_id)).build();
         googleSignInClient = GoogleSignIn.getClient(this, signInOptions);
-        getWindow().setStatusBarColor(bg); getWindow().setNavigationBarColor(bg);
-        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
+        updateSystemBars();
         Store.migrateOpeningBalance(this);
         if (!Store.isSetup(this)) showOpeningSetup(); else { initRange(); maybeCatchUp(); showMain(); }
+    }
+    private void applyThemeColors(){
+        darkMode=Store.prefs(this).getBoolean("dark_mode",false);
+        if(darkMode){ink=0xFFE5EFE8;muted=0xFFA4B2A9;green=0xFF8DCAA4;bg=0xFF101713;red=0xFFF28B82;line=0xFF2E4036;paleGreen=0xFF1D3828;}
+        else{ink=0xFF18352B;muted=0xFF718078;green=0xFF26734D;bg=0xFFF4F8F4;red=0xFFBA4A45;line=0xFFE1EAE2;paleGreen=0xFFE4F2E7;}
+    }
+    private void updateSystemBars(){
+        getWindow().setStatusBarColor(bg);getWindow().setNavigationBarColor(bg);
+        getWindow().getDecorView().setSystemUiVisibility(darkMode?0:(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR));
+    }
+    private void toggleDarkMode(){
+        Store.prefs(this).edit().putBoolean("dark_mode",!darkMode).apply();
+        applyThemeColors();updateSystemBars();showMain();
     }
     private int dp(float v) { return (int)(v * getResources().getDisplayMetrics().density + .5f); }
     private TextView text(String s,float size,int color){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(color);return t;}
@@ -82,7 +96,7 @@ public class MainActivity extends Activity {
         });
         target.requestApplyInsets();
     }
-    private MaterialCardView card(){MaterialCardView c=new MaterialCardView(this);c.setRadius(dp(20));c.setCardElevation(dp(1));c.setStrokeWidth(dp(1));c.setStrokeColor(line);c.setCardBackgroundColor(0xFFFFFFFF);return c;}
+    private MaterialCardView card(){MaterialCardView c=new MaterialCardView(this);c.setRadius(dp(20));c.setCardElevation(dp(1));c.setStrokeWidth(dp(1));c.setStrokeColor(line);c.setCardBackgroundColor(darkMode?0xFF1A241E:0xFFFFFFFF);return c;}
     private EditText field(String hint,boolean decimal){EditText e=new EditText(this);e.setSingleLine(true);e.setHint(hint);e.setInputType(decimal?InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL:InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);return e;}
     private Double number(String s){try{return Double.parseDouble(s.trim().replace(",",""));}catch(Exception e){return null;}}
     private void initRange(){Calendar c=Calendar.getInstance();c.set(Calendar.DAY_OF_MONTH,1);startDay(c);rangeStart=c.getTimeInMillis();c=Calendar.getInstance();endDay(c);rangeEnd=c.getTimeInMillis();}
@@ -107,7 +121,7 @@ public class MainActivity extends Activity {
     private void pageBase(String screen,String title){currentScreen=screen;root=column();root.setBackgroundColor(bg);safeInsets(root,20,14,8);TextView heading=text(title,25,ink);heading.setTypeface(null,1);LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(-1,-2);hp.bottomMargin=dp(8);root.addView(heading,hp);}
     private void addNav(){
         BottomNavigationView nav=new BottomNavigationView(this);
-        nav.setBackgroundColor(0xFFFFFFFF);
+        nav.setBackgroundColor(darkMode?0xFF1A241E:0xFFFFFFFF);
         nav.setElevation(dp(8));
         nav.setLabelVisibilityMode(NavigationBarView.LABEL_VISIBILITY_LABELED);
         nav.getMenu().add(0,1,0,"Home").setIcon(R.drawable.ic_home);
@@ -124,7 +138,9 @@ public class MainActivity extends Activity {
         FirebaseAuth auth=FirebaseAuth.getInstance();
         String accountLabel=auth.getCurrentUser()==null?"Sign in":"☁ "+(auth.getCurrentUser().getEmail()==null?"Account":auth.getCurrentUser().getEmail());
         Button account=button(accountLabel);account.setTextSize(11);top.addView(account,new LinearLayout.LayoutParams(0,dp(42),1));account.setOnClickListener(v->showAccountDialog());
-        View topSpace=new View(this);top.addView(topSpace,new LinearLayout.LayoutParams(dp(8),1));
+        View topSpace=new View(this);top.addView(topSpace,new LinearLayout.LayoutParams(dp(6),1));
+        Button theme=button(darkMode?"☀":"☾");theme.setContentDescription("Toggle dark mode");theme.setMinWidth(dp(42));theme.setMinimumWidth(dp(42));top.addView(theme);theme.setOnClickListener(v->toggleDarkMode());
+        View themeSpace=new View(this);top.addView(themeSpace,new LinearLayout.LayoutParams(dp(6),1));
         Button add=button("＋  Add transaction");add.setTextColor(0xFFFFFFFF);top.addView(add);root.addView(top,new LinearLayout.LayoutParams(-1,-2));add.setOnClickListener(v->showExpenseDialog());
         syncIfSignedIn();
         MaterialCardView balanceCard=card();balanceCard.setCardBackgroundColor(paleGreen);LinearLayout balanceBox=column();pad(balanceBox,18,18,18,18);
