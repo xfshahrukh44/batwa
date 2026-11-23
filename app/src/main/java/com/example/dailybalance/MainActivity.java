@@ -59,6 +59,8 @@ public class MainActivity extends Activity {
     private boolean darkMode;
 
     @Override public void onCreate(Bundle b) {
+        boolean useDarkTheme=getSharedPreferences("daily_balance_store",MODE_PRIVATE).getBoolean("dark_mode",false);
+        setTheme(useDarkTheme?R.style.AppThemeDark:R.style.AppTheme);
         super.onCreate(b);
         applyThemeColors();
         GoogleSignInOptions signInOptions = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -79,7 +81,7 @@ public class MainActivity extends Activity {
     }
     private void toggleDarkMode(){
         Store.prefs(this).edit().putBoolean("dark_mode",!darkMode).apply();
-        applyThemeColors();updateSystemBars();showMain();
+        recreate();
     }
     private int dp(float v) { return (int)(v * getResources().getDisplayMetrics().density + .5f); }
     private TextView text(String s,float size,int color){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(color);return t;}
