@@ -15,6 +15,8 @@ public class DailyCreditReceiver extends BroadcastReceiver {
         if (!today.equals(Store.lastCreditDate(context))) {
             Store.addTransaction(context, "Daily income", Store.dailyAmount(context), System.currentTimeMillis());
             Store.setLastCreditDate(context, today);
+            if (com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser() != null)
+                SyncManager.sync(context);
         }
         Alarm.schedule(context);
     }
